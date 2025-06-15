@@ -11,6 +11,7 @@ help:
 	@echo "lint        - Run linting"
 	@echo "format      - Format code"
 	@echo "build       - Build package"
+	@echo "publish     - Publish package to PyPI"
 	@echo "docker-build- Build Docker image"
 	@echo "docker-run  - Run Docker container"
 	@echo "deploy      - Deploy to production"
@@ -32,7 +33,12 @@ format:
 	poetry run isort invocr/ tests/
 
 build:
+	poetry version patch
 	poetry build
+
+publish: build
+	@echo "Publishing package to PyPI..."
+	poetry publish
 
 docker-build:
 	docker build -t invocr:latest .

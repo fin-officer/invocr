@@ -1,0 +1,103 @@
+# monitoring/prometheus.yml
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "alert_rules.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'invocr-api'
+    static_configs:
+      - targets: ['invocr-api:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx:80']
+    metrics_path: '/nginx_status'
+
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+---
+
+# monitoring/alert_rules.yml
+groups:
+- name: invocr.rules
+  rules:
+  - alert: InvOCRHighCPU
+    expr: rate(container_cpu_usage_seconds_total{container="invocr-api"}[5m]) > 0.8
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "InvOCR API high CPU usage"
+      description: "InvOCR API CPU usage is above 80% for more than 5 minutes"
+
+  - alert: InvOCRHighMemory
+    expr: container_memory_usage_bytes{container="invocr-api"} / container_spec_memory_limit_bytes > 0.9
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "InvOCR API high memory usage"
+      description: "InvOCR API memory usage is above 90%"
+
+  - alert: InvOCRAPIDown
+    expr: up{job="invocr-api"} == 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "InvOCR API is down"
+      description: "InvOCR API has been down for more than 1 minute"
+
+  - alert: InvOCRHighErrorRate
+    expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.1
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "InvOCR high error rate"
+      description: "InvOCR error rate is above 10%"
+
+  - alert: InvOCRSlowResponse
+    expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 10
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "InvOCR slow response time"
+      description: "95% of requests take more than 10 seconds"
+
+  - alert: DiskSpaceLow
+    expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.1
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Disk space low"
+      description: "Disk space is below 10%"
+
+
