@@ -4,9 +4,9 @@ Validates extracted invoice data and provides quality metrics
 """
 
 import re
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional, Tuple
 
 from ..utils.logger import get_logger
 
@@ -708,7 +708,7 @@ class InvoiceValidator:
 
     def _is_valid_email(self, email: str) -> bool:
         """Basic email validation"""
-        pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}
+        pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
         return re.match(pattern, email) is not None
 
     def validate_quick(self, data: Dict[str, Any]) -> bool:

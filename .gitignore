@@ -259,7 +259,8 @@ venv.bak/
 *.swp
 *.swo
 *~
-
+invoice.pdf
+invoice.*
 # MacOS
 .DS_Store
 

@@ -4,11 +4,12 @@ Handles environment variables and settings
 """
 
 import os
+from functools import lru_cache
 from pathlib import Path
 from typing import List, Optional, Union
-from functools import lru_cache
 
-from pydantic import BaseSettings, Field, validator
+from pydantic import Field, validator
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -29,8 +30,7 @@ class Settings(BaseSettings):
     # Logging
     log_level: str = Field("INFO", env="LOG_LEVEL")
     log_format: str = Field(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        env="LOG_FORMAT"
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s", env="LOG_FORMAT"
     )
 
     # File Storage
@@ -43,14 +43,13 @@ class Settings(BaseSettings):
     max_file_size: int = Field(52428800, env="MAX_FILE_SIZE")  # 50MB
     allowed_extensions: List[str] = Field(
         ["pdf", "png", "jpg", "jpeg", "tiff", "bmp", "json", "xml", "html"],
-        env="ALLOWED_EXTENSIONS"
+        env="ALLOWED_EXTENSIONS",
     )
 
     # OCR Configuration
     default_ocr_engine: str = Field("auto", env="DEFAULT_OCR_ENGINE")
     default_languages: List[str] = Field(
-        ["en", "pl", "de", "fr", "es", "it"],
-        env="DEFAULT_LANGUAGES"
+        ["en", "pl", "de", "fr", "es", "it"], env="DEFAULT_LANGUAGES"
     )
     ocr_confidence_threshold: float = Field(0.3, env="OCR_CONFIDENCE_THRESHOLD")
     image_dpi: int = Field(300, env="IMAGE_DPI")
@@ -66,8 +65,7 @@ class Settings(BaseSettings):
     # Security
     secret_key: str = Field("change-me-in-production", env="SECRET_KEY")
     cors_origins: List[str] = Field(
-        ["http://localhost:3000", "http://localhost:8080"],
-        env="CORS_ORIGINS"
+        ["http://localhost:3000", "http://localhost:8080"], env="CORS_ORIGINS"
     )
     rate_limit: str = Field("100/minute", env="RATE_LIMIT")
 
@@ -92,7 +90,9 @@ class Settings(BaseSettings):
 
     # Feature Flags
     enable_batch_processing: bool = Field(True, env="ENABLE_BATCH_PROCESSING")
-    enable_webhook_notifications: bool = Field(False, env="ENABLE_WEBHOOK_NOTIFICATIONS")
+    enable_webhook_notifications: bool = Field(
+        False, env="ENABLE_WEBHOOK_NOTIFICATIONS"
+    )
     enable_email_notifications: bool = Field(False, env="ENABLE_EMAIL_NOTIFICATIONS")
     enable_metrics: bool = Field(False, env="ENABLE_METRICS")
     enable_caching: bool = Field(True, env="ENABLE_CACHING")
@@ -186,7 +186,7 @@ class Settings(BaseSettings):
             "allow_origins": self.cors_origins,
             "allow_credentials": True,
             "allow_methods": ["*"],
-            "allow_headers": ["*"]
+            "allow_headers": ["*"],
         }
 
     def get_upload_config(self) -> dict:
@@ -195,7 +195,7 @@ class Settings(BaseSettings):
             "max_size": self.max_file_size,
             "allowed_extensions": self.allowed_extensions,
             "upload_dir": str(self.upload_dir),
-            "temp_dir": str(self.temp_dir)
+            "temp_dir": str(self.temp_dir),
         }
 
     def get_ocr_config(self) -> dict:
@@ -207,7 +207,7 @@ class Settings(BaseSettings):
             "tesseract_cmd": self.tesseract_cmd,
             "tessdata_prefix": self.tessdata_prefix,
             "image_dpi": self.image_dpi,
-            "image_enhancement": self.image_enhancement
+            "image_enhancement": self.image_enhancement,
         }
 
     def get_processing_config(self) -> dict:
@@ -217,7 +217,7 @@ class Settings(BaseSettings):
             "parallel_workers": self.parallel_workers,
             "async_processing": self.async_processing,
             "job_timeout": self.job_timeout,
-            "cleanup_interval": self.cleanup_interval
+            "cleanup_interval": self.cleanup_interval,
         }
 
 
@@ -299,7 +299,7 @@ ENABLE_METRICS=false
 ENABLE_CACHING=true
 """
 
-    with open(output_file, 'w', encoding='utf-8') as f:
+    with open(output_file, "w", encoding="utf-8") as f:
         f.write(default_env)
 
     return output_file
@@ -311,8 +311,12 @@ def validate_config() -> bool:
         settings = get_settings()
 
         # Check required directories
-        for directory in [settings.upload_dir, settings.output_dir,
-                          settings.temp_dir, settings.logs_dir]:
+        for directory in [
+            settings.upload_dir,
+            settings.output_dir,
+            settings.temp_dir,
+            settings.logs_dir,
+        ]:
             if not directory.exists():
                 print(f"Warning: Directory does not exist: {directory}")
 

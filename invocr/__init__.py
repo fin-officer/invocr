@@ -9,18 +9,22 @@ __author__ = "InvOCR Team"
 __email__ = "team@invocr.com"
 __description__ = "Invoice OCR and Conversion System"
 
-from .core.converter import create_converter, create_batch_converter
-from .core.ocr import create_ocr_engine
-from .core.extractor import create_extractor
+# Import core functionality
+from .core.converter import (
+    UniversalConverter,
+    BatchConverter,
+    create_converter,
+    create_batch_converter,
+)
+from .core.extractor import DataExtractor, create_extractor
+from .core.ocr import OCREngine, create_ocr_engine
 
-# Main exports
-__all__ = [
-    "create_converter",
-    "create_batch_converter",
-    "create_ocr_engine",
-    "create_extractor",
-    "__version__"
-]
+# Import format handlers
+from .formats.html_handler import HTMLHandler
+from .formats.image import ImageProcessor
+from .formats.json_handler import JSONHandler
+from .formats.pdf import PDFProcessor
+from .formats.xml_handler import XMLHandler
 
 # Package metadata
 PACKAGE_INFO = {
@@ -30,21 +34,12 @@ PACKAGE_INFO = {
     "author": __author__,
     "email": __email__,
     "url": "https://github.com/invocr/invocr",
-    "license": "MIT"
+    "license": "MIT",
 }
 
-# ---
-
-# invocr/core/__init__.py
-"""
-Core processing modules for InvOCR
-"""
-
-from .converter import UniversalConverter, BatchConverter, create_converter, create_batch_converter
-from .ocr import OCREngine, create_ocr_engine
-from .extractor import DataExtractor, create_extractor
-
+# Main exports
 __all__ = [
+    # Core functionality
     "UniversalConverter",
     "BatchConverter",
     "OCREngine",
@@ -52,69 +47,16 @@ __all__ = [
     "create_converter",
     "create_batch_converter",
     "create_ocr_engine",
-    "create_extractor"
-]
-
-# ---
-
-# invocr/formats/__init__.py
-"""
-Format handlers for different file types
-"""
-
-from .pdf import PDFProcessor
-from .image import ImageProcessor
-from .json_handler import JSONHandler
-from .xml_handler import XMLHandler
-from .html_handler import HTMLHandler
-
-__all__ = [
+    "create_extractor",
+    # Format handlers
     "PDFProcessor",
     "ImageProcessor",
     "JSONHandler",
     "XMLHandler",
-    "HTMLHandler"
+    "HTMLHandler",
+    # Metadata
+    "__version__",
 ]
-
-# ---
-
-# invocr/api/__init__.py
-"""
-REST API for InvOCR
-"""
-
-from .main import app
-from .models import (
-    ConversionRequest,
-    ConversionResponse,
-    BatchConversionRequest,
-    BatchConversionResponse,
-    ConversionStatus,
-    HealthResponse,
-    SystemInfo
-)
-
-__all__ = [
-    "app",
-    "ConversionRequest",
-    "ConversionResponse",
-    "BatchConversionRequest",
-    "BatchConversionResponse",
-    "ConversionStatus",
-    "HealthResponse",
-    "SystemInfo"
-]
-
-# ---
-
-# invocr/cli/__init__.py
-"""
-Command Line Interface for InvOCR
-"""
-
-from .commands import cli
-
-__all__ = ["cli"]
 
 # ---
 
@@ -123,15 +65,16 @@ __all__ = ["cli"]
 Utility modules for InvOCR
 """
 
-from .config import get_settings, Settings
-from .logger import get_logger, setup_logging
-from .helpers import (
-    ensure_directory,
+from .utils.config import Settings, get_settings
+from .utils.helpers import (
     clean_filename,
+    ensure_directory,
+    get_file_extension,
     get_file_hash,
     format_file_size,
     safe_json_loads
 )
+from .logger import get_logger, setup_logging
 
 __all__ = [
     "get_settings",
@@ -142,7 +85,7 @@ __all__ = [
     "clean_filename",
     "get_file_hash",
     "format_file_size",
-    "safe_json_loads"
+    "safe_json_loads",
 ]
 
 # ---
@@ -168,7 +111,4 @@ TEST_OUTPUT_DIR = Path(__file__).parent / "output"
 TEST_DATA_DIR.mkdir(exist_ok=True)
 TEST_OUTPUT_DIR.mkdir(exist_ok=True)
 
-__all__ = [
-    "TEST_DATA_DIR",
-    "TEST_OUTPUT_DIR"
-]
+__all__ = ["TEST_DATA_DIR", "TEST_OUTPUT_DIR"]

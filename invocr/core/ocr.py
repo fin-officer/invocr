@@ -25,13 +25,14 @@ class OCREngine:
     """Multi-engine OCR processor with preprocessing and optimization"""
 
     def __init__(self, languages: List[str] = None):
-        self.languages = languages or ['en', 'pl', 'de', 'fr', 'es', 'it']
-        self.tesseract_langs = '+'.join(self._map_languages(self.languages))
+        self.languages = languages or ["en", "pl", "de", "fr", "es", "it"]
+        self.tesseract_langs = "+".join(self._map_languages(self.languages))
         self.easyocr = easyocr.Reader(self.languages, gpu=False)
         logger.info(f"OCR initialized with languages: {self.languages}")
 
-    def extract_text(self, image_path: Union[str, Path],
-                     engine: str = "auto") -> Dict[str, any]:
+    def extract_text(
+        self, image_path: Union[str, Path], engine: str = "auto"
+    ) -> Dict[str, any]:
         """
         Extract text from image using specified OCR engine
 
@@ -56,8 +57,9 @@ class OCREngine:
                         results[eng] = {"text": "", "confidence": 0.0}
 
                 # Select best result based on confidence
-                best_engine = max(results.keys(),
-                                  key=lambda k: results[k]["confidence"])
+                best_engine = max(
+                    results.keys(), key=lambda k: results[k]["confidence"]
+                )
                 result = results[best_engine]
                 result["engine_used"] = best_engine
 
@@ -122,32 +124,35 @@ class OCREngine:
 
     def _extract_tesseract(self, image: np.ndarray) -> Dict[str, any]:
         """Extract text using Tesseract OCR"""
-        config = r'--oem 3 --psm 6'
+        config = r"--oem 3 --psm 6"
 
         # Extract text with confidence
         data = pytesseract.image_to_data(
-            image, lang=self.tesseract_langs, config=config, output_type=pytesseract.Output.DICT
+            image,
+            lang=self.tesseract_langs,
+            config=config,
+            output_type=pytesseract.Output.DICT,
         )
 
         # Filter out low confidence detections
         text_parts = []
         confidences = []
 
-        for i, conf in enumerate(data['conf']):
+        for i, conf in enumerate(data["conf"]):
             if int(conf) > 30:  # Minimum confidence threshold
-                text = data['text'][i].strip()
+                text = data["text"][i].strip()
                 if text:
                     text_parts.append(text)
                     confidences.append(int(conf))
 
-        full_text = ' '.join(text_parts)
+        full_text = " ".join(text_parts)
         avg_confidence = sum(confidences) / len(confidences) if confidences else 0
 
         return {
             "text": full_text,
             "confidence": avg_confidence / 100.0,  # Normalize to 0-1
             "word_count": len(text_parts),
-            "raw_data": data
+            "raw_data": data,
         }
 
     def _extract_easyocr(self, image: np.ndarray) -> Dict[str, any]:
@@ -157,59 +162,68 @@ class OCREngine:
         text_parts = []
         confidences = []
 
-        for (bbox, text, conf) in results:
+        for bbox, text, conf in results:
             if conf > 0.3:  # Minimum confidence threshold
                 text_parts.append(text)
                 confidences.append(conf)
 
-        full_text = ' '.join(text_parts)
+        full_text = " ".join(text_parts)
         avg_confidence = sum(confidences) / len(confidences) if confidences else 0
 
         return {
             "text": full_text,
             "confidence": avg_confidence,
             "word_count": len(text_parts),
-            "raw_data": results
+            "raw_data": results,
         }
 
     def _map_languages(self, languages: List[str]) -> List[str]:
         """Map language codes to Tesseract language codes"""
         lang_map = {
-            'en': 'eng', 'pl': 'pol', 'de': 'deu', 'fr': 'fra',
-            'es': 'spa', 'it': 'ita', 'pt': 'por', 'nl': 'nld',
-            'ru': 'rus', 'cs': 'ces', 'sk': 'slk', 'hu': 'hun'
+            "en": "eng",
+            "pl": "pol",
+            "de": "deu",
+            "fr": "fra",
+            "es": "spa",
+            "it": "ita",
+            "pt": "por",
+            "nl": "nld",
+            "ru": "rus",
+            "cs": "ces",
+            "sk": "slk",
+            "hu": "hun",
         }
         return [lang_map.get(lang, lang) for lang in languages]
 
     def detect_language(self, text: str) -> str:
         """Simple language detection based on character patterns"""
         # Polish specific characters
-        if any(char in text for char in 'ąćęłńóśźż'):
-            return 'pl'
+        if any(char in text for char in "ąćęłńóśźż"):
+            return "pl"
 
         # German specific characters
-        if any(char in text for char in 'äöüß'):
-            return 'de'
+        if any(char in text for char in "äöüß"):
+            return "de"
 
         # French specific characters
-        if any(char in text for char in 'àâäéèêëïîôùûüÿç'):
-            return 'fr'
+        if any(char in text for char in "àâäéèêëïîôùûüÿç"):
+            return "fr"
 
         # Spanish specific characters
-        if any(char in text for char in 'ñáéíóúü'):
-            return 'es'
+        if any(char in text for char in "ñáéíóúü"):
+            return "es"
 
         # Default to English
-        return 'en'
+        return "en"
 
     def enhance_image_quality(self, image_path: Union[str, Path]) -> str:
         """Enhance image quality before OCR processing"""
-        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
             # Load with PIL for enhancement
             with Image.open(image_path) as img:
                 # Convert to RGB if needed
-                if img.mode != 'RGB':
-                    img = img.convert('RGB')
+                if img.mode != "RGB":
+                    img = img.convert("RGB")
 
                 # Enhance sharpness
                 enhancer = ImageEnhance.Sharpness(img)
@@ -220,7 +234,9 @@ class OCREngine:
                 img = enhancer.enhance(1.2)
 
                 # Apply unsharp mask
-                img = img.filter(ImageFilter.UnsharpMask(radius=2, percent=150, threshold=3))
+                img = img.filter(
+                    ImageFilter.UnsharpMask(radius=2, percent=150, threshold=3)
+                )
 
                 # Resize if too small
                 width, height = img.size
@@ -230,28 +246,29 @@ class OCREngine:
                     img = img.resize(new_size, Image.Resampling.LANCZOS)
 
                 # Save enhanced image
-                img.save(tmp.name, 'PNG', quality=95, optimize=True)
+                img.save(tmp.name, "PNG", quality=95, optimize=True)
 
             return tmp.name
 
-    def extract_regions(self, image_path: Union[str, Path],
-                        regions: List[Tuple[int, int, int, int]]) -> List[Dict]:
+    def extract_regions(
+        self, image_path: Union[str, Path], regions: List[Tuple[int, int, int, int]]
+    ) -> List[Dict]:
         """Extract text from specific regions of the image"""
         results = []
         image = cv2.imread(str(image_path))
 
         for i, (x, y, w, h) in enumerate(regions):
             # Extract region
-            region = image[y:y + h, x:x + w]
+            region = image[y : y + h, x : x + w]
 
             # Process region
-            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
                 cv2.imwrite(tmp.name, region)
 
                 # Extract text from region
                 result = self.extract_text(tmp.name)
-                result['region_id'] = i
-                result['coordinates'] = (x, y, w, h)
+                result["region_id"] = i
+                result["coordinates"] = (x, y, w, h)
                 results.append(result)
 
                 # Cleanup

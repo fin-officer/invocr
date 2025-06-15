@@ -6,9 +6,9 @@ Provides structured logging with file and console outputs
 import logging
 import logging.handlers
 import sys
-from pathlib import Path
-from typing import Optional, Dict, Any
 from functools import lru_cache
+from pathlib import Path
+from typing import Any, Dict, Optional
 
 try:
     from loguru import logger as loguru_logger
@@ -24,17 +24,17 @@ class ColoredFormatter(logging.Formatter):
     """Custom formatter with colors for console output"""
 
     COLORS = {
-        'DEBUG': '\033[36m',  # Cyan
-        'INFO': '\033[32m',  # Green
-        'WARNING': '\033[33m',  # Yellow
-        'ERROR': '\033[31m',  # Red
-        'CRITICAL': '\033[35m',  # Magenta
-        'RESET': '\033[0m'  # Reset
+        "DEBUG": "\033[36m",  # Cyan
+        "INFO": "\033[32m",  # Green
+        "WARNING": "\033[33m",  # Yellow
+        "ERROR": "\033[31m",  # Red
+        "CRITICAL": "\033[35m",  # Magenta
+        "RESET": "\033[0m",  # Reset
     }
 
     def format(self, record):
-        if hasattr(record, 'levelname'):
-            color = self.COLORS.get(record.levelname, self.COLORS['RESET'])
+        if hasattr(record, "levelname"):
+            color = self.COLORS.get(record.levelname, self.COLORS["RESET"])
             record.levelname = f"{color}{record.levelname}{self.COLORS['RESET']}"
         return super().format(record)
 
@@ -62,7 +62,7 @@ class InvOCRLogger:
 
         if self.settings.is_development():
             console_formatter = ColoredFormatter(
-                '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
             )
         else:
             console_formatter = logging.Formatter(self.settings.log_format)
@@ -73,15 +73,12 @@ class InvOCRLogger:
         # File handler
         log_file = self.settings.logs_dir / f"{self.name}.log"
         file_handler = logging.handlers.RotatingFileHandler(
-            log_file,
-            maxBytes=10 * 1024 * 1024,  # 10MB
-            backupCount=5,
-            encoding='utf-8'
+            log_file, maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8"  # 10MB
         )
         file_handler.setLevel(logging.DEBUG)
 
         file_formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s'
+            "%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s"
         )
         file_handler.setFormatter(file_formatter)
         self._logger.addHandler(file_handler)
@@ -89,10 +86,7 @@ class InvOCRLogger:
         # Error file handler
         error_file = self.settings.logs_dir / f"{self.name}_errors.log"
         error_handler = logging.handlers.RotatingFileHandler(
-            error_file,
-            maxBytes=5 * 1024 * 1024,  # 5MB
-            backupCount=3,
-            encoding='utf-8'
+            error_file, maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8"  # 5MB
         )
         error_handler.setLevel(logging.ERROR)
         error_handler.setFormatter(file_formatter)
@@ -105,7 +99,7 @@ class InvOCRLogger:
                 json_file,
                 maxBytes=20 * 1024 * 1024,  # 20MB
                 backupCount=10,
-                encoding='utf-8'
+                encoding="utf-8",
             )
             json_handler.setLevel(logging.INFO)
             json_handler.setFormatter(JSONFormatter())
@@ -135,8 +129,9 @@ class InvOCRLogger:
         """Log exception with traceback"""
         self._logger.exception(message, extra=kwargs)
 
-    def log_conversion(self, job_id: str, input_file: str, output_file: str,
-                       status: str, **metadata):
+    def log_conversion(
+        self, job_id: str, input_file: str, output_file: str, status: str, **metadata
+    ):
         """Log conversion operation"""
         self.info(
             f"Conversion {status}: {input_file} -> {output_file}",
@@ -144,11 +139,12 @@ class InvOCRLogger:
             input_file=input_file,
             output_file=output_file,
             status=status,
-            **metadata
+            **metadata,
         )
 
-    def log_ocr_result(self, file_path: str, confidence: float,
-                       text_length: int, engine: str):
+    def log_ocr_result(
+        self, file_path: str, confidence: float, text_length: int, engine: str
+    ):
         """Log OCR operation result"""
         self.info(
             f"OCR completed: {file_path}",
@@ -156,7 +152,7 @@ class InvOCRLogger:
             confidence=confidence,
             text_length=text_length,
             engine=engine,
-            operation="ocr"
+            operation="ocr",
         )
 
     def log_performance(self, operation: str, duration: float, **metrics):
@@ -165,11 +161,17 @@ class InvOCRLogger:
             f"Performance: {operation} took {duration:.2f}s",
             operation=operation,
             duration=duration,
-            **metrics
+            **metrics,
         )
 
-    def log_api_request(self, method: str, path: str, status_code: int,
-                        duration: float, user_id: Optional[str] = None):
+    def log_api_request(
+        self,
+        method: str,
+        path: str,
+        status_code: int,
+        duration: float,
+        user_id: Optional[str] = None,
+    ):
         """Log API request"""
         self.info(
             f"API {method} {path} - {status_code} ({duration:.3f}s)",
@@ -178,7 +180,7 @@ class InvOCRLogger:
             status_code=status_code,
             duration=duration,
             user_id=user_id,
-            operation="api_request"
+            operation="api_request",
         )
 
 
@@ -190,27 +192,45 @@ class JSONFormatter(logging.Formatter):
         from datetime import datetime
 
         log_entry = {
-            'timestamp': datetime.utcnow().isoformat(),
-            'level': record.levelname,
-            'logger': record.name,
-            'message': record.getMessage(),
-            'module': record.module,
-            'function': record.funcName,
-            'line': record.lineno
+            "timestamp": datetime.utcnow().isoformat(),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+            "module": record.module,
+            "function": record.funcName,
+            "line": record.lineno,
         }
 
         # Add extra fields
         for key, value in record.__dict__.items():
-            if key not in ['name', 'msg', 'args', 'levelname', 'levelno',
-                           'pathname', 'filename', 'module', 'lineno',
-                           'funcName', 'created', 'msecs', 'relativeCreated',
-                           'thread', 'threadName', 'processName', 'process',
-                           'getMessage', 'exc_info', 'exc_text', 'stack_info']:
+            if key not in [
+                "name",
+                "msg",
+                "args",
+                "levelname",
+                "levelno",
+                "pathname",
+                "filename",
+                "module",
+                "lineno",
+                "funcName",
+                "created",
+                "msecs",
+                "relativeCreated",
+                "thread",
+                "threadName",
+                "processName",
+                "process",
+                "getMessage",
+                "exc_info",
+                "exc_text",
+                "stack_info",
+            ]:
                 log_entry[key] = value
 
         # Add exception info if present
         if record.exc_info:
-            log_entry['exception'] = self.formatException(record.exc_info)
+            log_entry["exception"] = self.formatException(record.exc_info)
 
         return json.dumps(log_entry, ensure_ascii=False)
 
@@ -222,9 +242,7 @@ def get_logger(name: str = "invocr") -> InvOCRLogger:
 
 
 def setup_logging(
-        level: str = None,
-        log_file: Optional[str] = None,
-        use_loguru: bool = False
+    level: str = None, log_file: Optional[str] = None, use_loguru: bool = False
 ) -> None:
     """Setup global logging configuration"""
     settings = get_settings()
@@ -241,10 +259,10 @@ def setup_logging(
             sys.stdout,
             level=level,
             format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | "
-                   "<level>{level: <8}</level> | "
-                   "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> | "
-                   "<level>{message}</level>",
-            colorize=True
+            "<level>{level: <8}</level> | "
+            "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> | "
+            "<level>{message}</level>",
+            colorize=True,
         )
 
         # File handler
@@ -257,7 +275,7 @@ def setup_logging(
             format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} | {message}",
             rotation="10 MB",
             retention="30 days",
-            encoding="utf-8"
+            encoding="utf-8",
         )
 
         # Error file
@@ -268,7 +286,7 @@ def setup_logging(
             format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} | {message}",
             rotation="5 MB",
             retention="60 days",
-            encoding="utf-8"
+            encoding="utf-8",
         )
 
     else:
@@ -276,7 +294,7 @@ def setup_logging(
         logging.basicConfig(
             level=getattr(logging, level.upper()),
             format=settings.log_format,
-            datefmt='%Y-%m-%d %H:%M:%S'
+            datefmt="%Y-%m-%d %H:%M:%S",
         )
 
         # Set up file logging
@@ -284,14 +302,9 @@ def setup_logging(
             log_file = settings.logs_dir / "invocr.log"
 
         file_handler = logging.handlers.RotatingFileHandler(
-            log_file,
-            maxBytes=10 * 1024 * 1024,
-            backupCount=5,
-            encoding='utf-8'
+            log_file, maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8"
         )
-        file_handler.setFormatter(
-            logging.Formatter(settings.log_format)
-        )
+        file_handler.setFormatter(logging.Formatter(settings.log_format))
 
         root_logger = logging.getLogger()
         root_logger.addHandler(file_handler)
@@ -318,13 +331,13 @@ class LogContext:
 
     def __enter__(self):
         # Store current extra context
-        if hasattr(self.logger._logger, '_extra'):
+        if hasattr(self.logger._logger, "_extra"):
             self.old_extra = self.logger._logger._extra.copy()
         else:
             self.old_extra = {}
 
         # Add new context
-        if not hasattr(self.logger._logger, '_extra'):
+        if not hasattr(self.logger._logger, "_extra"):
             self.logger._logger._extra = {}
         self.logger._logger._extra.update(self.context)
 

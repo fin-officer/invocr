@@ -6,10 +6,11 @@ Supports multiple document types and languages
 import re
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple, Union
+
 from dateutil import parser as date_parser
 
-from ..utils.logger import get_logger
 from ..utils.config import get_settings
+from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
 settings = get_settings()
@@ -19,11 +20,13 @@ class DataExtractor:
     """Advanced data extractor for invoices, receipts, and payment documents"""
 
     def __init__(self, languages: List[str] = None):
-        self.languages = languages or ['en', 'pl', 'de', 'fr', 'es']
+        self.languages = languages or ["en", "pl", "de", "fr", "es"]
         self.patterns = self._load_extraction_patterns()
         logger.info(f"Data extractor initialized for languages: {self.languages}")
 
-    def extract_invoice_data(self, text: str, document_type: str = "invoice") -> Dict[str, any]:
+    def extract_invoice_data(
+        self, text: str, document_type: str = "invoice"
+    ) -> Dict[str, any]:
         """
         Extract structured data from invoice text
 
@@ -64,7 +67,7 @@ class DataExtractor:
             "detected_language": detected_lang,
             "extraction_timestamp": datetime.now().isoformat(),
             "text_length": len(text),
-            "confidence": self._calculate_confidence(data, text)
+            "confidence": self._calculate_confidence(data, text),
         }
 
         return data
@@ -76,13 +79,30 @@ class DataExtractor:
                 "document_number": "",
                 "document_date": "",
                 "due_date": "",
-                "seller": {"name": "", "address": "", "tax_id": "", "phone": "", "email": ""},
-                "buyer": {"name": "", "address": "", "tax_id": "", "phone": "", "email": ""},
+                "seller": {
+                    "name": "",
+                    "address": "",
+                    "tax_id": "",
+                    "phone": "",
+                    "email": "",
+                },
+                "buyer": {
+                    "name": "",
+                    "address": "",
+                    "tax_id": "",
+                    "phone": "",
+                    "email": "",
+                },
                 "items": [],
-                "totals": {"subtotal": 0.0, "tax_rate": 0.0, "tax_amount": 0.0, "total": 0.0},
+                "totals": {
+                    "subtotal": 0.0,
+                    "tax_rate": 0.0,
+                    "tax_amount": 0.0,
+                    "total": 0.0,
+                },
                 "payment_method": "",
                 "bank_account": "",
-                "notes": ""
+                "notes": "",
             },
             "receipt": {
                 "receipt_number": "",
@@ -92,7 +112,7 @@ class DataExtractor:
                 "items": [],
                 "totals": {"subtotal": 0.0, "tax": 0.0, "total": 0.0},
                 "payment_method": "",
-                "card_info": ""
+                "card_info": "",
             },
             "payment": {
                 "transaction_id": "",
@@ -102,8 +122,8 @@ class DataExtractor:
                 "amount": 0.0,
                 "currency": "",
                 "description": "",
-                "reference": ""
-            }
+                "reference": "",
+            },
         }
         return templates.get(doc_type, templates["invoice"])
 
@@ -182,7 +202,7 @@ class DataExtractor:
         patterns = self.patterns[language]["items"]
 
         # Look for table-like structures
-        lines = text.split('\n')
+        lines = text.split("\n")
 
         for line in lines:
             line = line.strip()
@@ -213,8 +233,12 @@ class DataExtractor:
                 return {
                     "description": groups[0].strip() if groups[0] else "",
                     "quantity": float(groups[1].replace(",", ".")) if groups[1] else 1,
-                    "unit_price": float(groups[2].replace(",", ".")) if groups[2] else 0,
-                    "total_price": float(groups[3].replace(",", ".")) if groups[3] else 0
+                    "unit_price": (
+                        float(groups[2].replace(",", ".")) if groups[2] else 0
+                    ),
+                    "total_price": (
+                        float(groups[3].replace(",", ".")) if groups[3] else 0
+                    ),
                 }
             except (ValueError, IndexError):
                 return None
@@ -233,7 +257,7 @@ class DataExtractor:
                 if match:
                     try:
                         value_str = match.group(1).replace(" ", "").replace(",", ".")
-                        value = float(re.sub(r'[^\d\.]', '', value_str))
+                        value = float(re.sub(r"[^\d\.]", "", value_str))
                         totals[total_type] = value
                         break
                     except (ValueError, IndexError):
@@ -271,9 +295,9 @@ class DataExtractor:
     def _extract_dates(self, text: str) -> List[str]:
         """Extract and parse dates from text"""
         date_patterns = [
-            r'(\d{1,2}[\-\./]\d{1,2}[\-\./]\d{4})',
-            r'(\d{4}[\-\./]\d{1,2}[\-\./]\d{1,2})',
-            r'(\d{1,2}\s+\w+\s+\d{4})',
+            r"(\d{1,2}[\-\./]\d{1,2}[\-\./]\d{4})",
+            r"(\d{4}[\-\./]\d{1,2}[\-\./]\d{1,2})",
+            r"(\d{1,2}\s+\w+\s+\d{4})",
         ]
 
         dates = []
@@ -293,16 +317,16 @@ class DataExtractor:
     def _extract_tax_ids(self, text: str) -> List[str]:
         """Extract tax identification numbers"""
         patterns = [
-            r'(?:NIP|VAT|Tax\s*ID)[:\s]*([0-9\-\s]{8,15})',
-            r'([0-9]{3}[\-\s]?[0-9]{3}[\-\s]?[0-9]{2}[\-\s]?[0-9]{2})',
-            r'([0-9]{2}[\-\s]?[0-9]{8})',
+            r"(?:NIP|VAT|Tax\s*ID)[:\s]*([0-9\-\s]{8,15})",
+            r"([0-9]{3}[\-\s]?[0-9]{3}[\-\s]?[0-9]{2}[\-\s]?[0-9]{2})",
+            r"([0-9]{2}[\-\s]?[0-9]{8})",
         ]
 
         tax_ids = []
         for pattern in patterns:
             matches = re.findall(pattern, text, re.IGNORECASE)
             for match in matches:
-                clean_id = re.sub(r'[\-\s]', '', match)
+                clean_id = re.sub(r"[\-\s]", "", match)
                 if len(clean_id) >= 8 and clean_id not in tax_ids:
                     tax_ids.append(match.strip())
 
@@ -310,14 +334,14 @@ class DataExtractor:
 
     def _extract_emails(self, text: str) -> List[str]:
         """Extract email addresses"""
-        pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+        pattern = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"
         return list(set(re.findall(pattern, text)))
 
     def _extract_phones(self, text: str) -> List[str]:
         """Extract phone numbers"""
         patterns = [
-            r'(?:\+48\s?)?(?:\d{2,3}[\s\-]?\d{3}[\s\-]?\d{2,3}[\s\-]?\d{2,3})',
-            r'(?:\+\d{1,3}\s?)?\(?\d{2,4}\)?[\s\-]?\d{3,4}[\s\-]?\d{3,4}',
+            r"(?:\+48\s?)?(?:\d{2,3}[\s\-]?\d{3}[\s\-]?\d{2,3}[\s\-]?\d{2,3})",
+            r"(?:\+\d{1,3}\s?)?\(?\d{2,4}\)?[\s\-]?\d{3,4}[\s\-]?\d{3,4}",
         ]
 
         phones = []
@@ -332,7 +356,7 @@ class DataExtractor:
         # This is a simplified implementation
         # In practice, you'd use NER (Named Entity Recognition) or more sophisticated methods
 
-        lines = [line.strip() for line in text.split('\n') if line.strip()]
+        lines = [line.strip() for line in text.split("\n") if line.strip()]
 
         # Look for patterns that indicate company names/addresses
         entities = []
@@ -340,7 +364,9 @@ class DataExtractor:
 
         for line in lines:
             # Skip obvious non-entity lines
-            if any(word in line.lower() for word in ['faktura', 'invoice', 'total', 'suma']):
+            if any(
+                word in line.lower() for word in ["faktura", "invoice", "total", "suma"]
+            ):
                 continue
 
             # Simple heuristic: lines with proper case might be names/addresses
@@ -352,10 +378,12 @@ class DataExtractor:
 
                 # If we have enough info, save entity
                 if len(current_entity["address"]) > 20:
-                    entities.append({
-                        "name": current_entity["name"],
-                        "address": current_entity["address"].strip()
-                    })
+                    entities.append(
+                        {
+                            "name": current_entity["name"],
+                            "address": current_entity["address"].strip(),
+                        }
+                    )
                     current_entity = {"name": "", "address": ""}
 
         return entities[:2]  # Return max 2 entities
@@ -363,18 +391,30 @@ class DataExtractor:
     def _split_into_sections(self, text: str) -> List[str]:
         """Split text into logical sections"""
         # Split by multiple newlines or obvious section breaks
-        sections = re.split(r'\n\s*\n|\n-+\n|\n=+\n', text)
+        sections = re.split(r"\n\s*\n|\n-+\n|\n=+\n", text)
         return [section.strip() for section in sections if section.strip()]
 
     def _detect_language(self, text: str) -> str:
         """Simple language detection"""
         # Check for language-specific characters and words
         lang_indicators = {
-            'pl': ['ą', 'ć', 'ę', 'ł', 'ń', 'ó', 'ś', 'ź', 'ż', 'faktura', 'sprzedawca'],
-            'de': ['ä', 'ö', 'ü', 'ß', 'rechnung', 'verkäufer'],
-            'fr': ['à', 'â', 'é', 'è', 'ê', 'facture', 'vendeur'],
-            'es': ['ñ', 'á', 'é', 'í', 'ó', 'ú', 'factura', 'vendedor'],
-            'it': ['à', 'è', 'ì', 'ò', 'ù', 'fattura', 'venditore']
+            "pl": [
+                "ą",
+                "ć",
+                "ę",
+                "ł",
+                "ń",
+                "ó",
+                "ś",
+                "ź",
+                "ż",
+                "faktura",
+                "sprzedawca",
+            ],
+            "de": ["ä", "ö", "ü", "ß", "rechnung", "verkäufer"],
+            "fr": ["à", "â", "é", "è", "ê", "facture", "vendeur"],
+            "es": ["ñ", "á", "é", "í", "ó", "ú", "factura", "vendedor"],
+            "it": ["à", "è", "ì", "ò", "ù", "fattura", "venditore"],
         }
 
         text_lower = text.lower()
@@ -384,8 +424,8 @@ class DataExtractor:
             score = sum(1 for indicator in indicators if indicator in text_lower)
             scores[lang] = score
 
-        detected = max(scores.keys(), key=lambda k: scores[k]) if scores else 'en'
-        return detected if scores[detected] > 0 else 'en'
+        detected = max(scores.keys(), key=lambda k: scores[k]) if scores else "en"
+        return detected if scores[detected] > 0 else "en"
 
     def _validate_and_clean(self, data: Dict) -> None:
         """Validate and clean extracted data"""
@@ -437,13 +477,17 @@ class DataExtractor:
                 "basic": {
                     "document_number": [
                         r"(?:Invoice|INV)\s*[:#]?\s*([A-Z0-9\/\-\.]+)",
-                        r"(?:Number|No\.?)\s*:?\s*([A-Z0-9\/\-\.]+)"
+                        r"(?:Number|No\.?)\s*:?\s*([A-Z0-9\/\-\.]+)",
                     ]
                 },
                 "totals": {
-                    "total": [r"(?:Total|TOTAL|Amount Due)\s*:?\s*([0-9\s,]+\.?\d{0,2})"],
-                    "subtotal": [r"(?:Subtotal|Sub-total)\s*:?\s*([0-9\s,]+\.?\d{0,2})"],
-                    "tax_amount": [r"(?:Tax|VAT)\s*:?\s*([0-9\s,]+\.?\d{0,2})"]
+                    "total": [
+                        r"(?:Total|TOTAL|Amount Due)\s*:?\s*([0-9\s,]+\.?\d{0,2})"
+                    ],
+                    "subtotal": [
+                        r"(?:Subtotal|Sub-total)\s*:?\s*([0-9\s,]+\.?\d{0,2})"
+                    ],
+                    "tax_amount": [r"(?:Tax|VAT)\s*:?\s*([0-9\s,]+\.?\d{0,2})"],
                 },
                 "items": {
                     "line_item": [
@@ -452,43 +496,51 @@ class DataExtractor:
                 },
                 "payment": {
                     "payment_method": [r"(?:Payment|Method)\s*:?\s*([A-Za-z\s]+)"],
-                    "bank_account": [r"(?:Account|IBAN)\s*:?\s*([A-Z0-9\s]+)"]
-                }
+                    "bank_account": [r"(?:Account|IBAN)\s*:?\s*([A-Z0-9\s]+)"],
+                },
             },
             "pl": {
                 "basic": {
                     "document_number": [
                         r"(?:Faktura|FV|F)\s*[:/]?\s*([A-Z0-9\/\-\.]+)",
-                        r"(?:Nr\.?|Numer)\s*:?\s*([A-Z0-9\/\-\.]+)"
+                        r"(?:Nr\.?|Numer)\s*:?\s*([A-Z0-9\/\-\.]+)",
                     ]
                 },
                 "totals": {
-                    "total": [r"(?:Razem|Do zapłaty|Suma)\s*:?\s*([0-9\s,]+[,\.]\d{2})\s*(?:zł|PLN)?"],
+                    "total": [
+                        r"(?:Razem|Do zapłaty|Suma)\s*:?\s*([0-9\s,]+[,\.]\d{2})\s*(?:zł|PLN)?"
+                    ],
                     "subtotal": [r"(?:Netto|Suma netto)\s*:?\s*([0-9\s,]+[,\.]\d{2})"],
-                    "tax_amount": [r"(?:VAT|Podatek)\s*:?\s*([0-9\s,]+[,\.]\d{2})"]
+                    "tax_amount": [r"(?:VAT|Podatek)\s*:?\s*([0-9\s,]+[,\.]\d{2})"],
                 },
                 "items": {
                     "line_item": [
                         r"(.+?)\s+(\d+(?:[,\.]\d+)?)\s+([0-9\s,]+[,\.]\d{2})\s+([0-9\s,]+[,\.]\d{2})",
-                        r"(\d+)\s+(.+?)\s+(\d+(?:[,\.]\d+)?)\s+([0-9\s,]+[,\.]\d{2})\s+([0-9\s,]+[,\.]\d{2})"
+                        r"(\d+)\s+(.+?)\s+(\d+(?:[,\.]\d+)?)\s+([0-9\s,]+[,\.]\d{2})\s+([0-9\s,]+[,\.]\d{2})",
                     ]
                 },
                 "payment": {
-                    "payment_method": [r"(?:Sposób płatności|Płatność)\s*:?\s*([A-Za-z\s]+)"],
-                    "bank_account": [r"(?:Nr konta|Konto|IBAN)\s*:?\s*([A-Z0-9\s]+)"]
-                }
+                    "payment_method": [
+                        r"(?:Sposób płatności|Płatność)\s*:?\s*([A-Za-z\s]+)"
+                    ],
+                    "bank_account": [r"(?:Nr konta|Konto|IBAN)\s*:?\s*([A-Z0-9\s]+)"],
+                },
             },
             "de": {
                 "basic": {
                     "document_number": [
                         r"(?:Rechnung|RG)\s*[:\-]?\s*([A-Z0-9\/\-\.]+)",
-                        r"(?:Nummer|Nr\.?)\s*:?\s*([A-Z0-9\/\-\.]+)"
+                        r"(?:Nummer|Nr\.?)\s*:?\s*([A-Z0-9\/\-\.]+)",
                     ]
                 },
                 "totals": {
-                    "total": [r"(?:Gesamt|Gesamtbetrag|Endbetrag)\s*:?\s*([0-9\s,]+[,\.]\d{2})\s*€?"],
-                    "subtotal": [r"(?:Netto|Zwischensumme)\s*:?\s*([0-9\s,]+[,\.]\d{2})"],
-                    "tax_amount": [r"(?:MwSt|Steuer)\s*:?\s*([0-9\s,]+[,\.]\d{2})"]
+                    "total": [
+                        r"(?:Gesamt|Gesamtbetrag|Endbetrag)\s*:?\s*([0-9\s,]+[,\.]\d{2})\s*€?"
+                    ],
+                    "subtotal": [
+                        r"(?:Netto|Zwischensumme)\s*:?\s*([0-9\s,]+[,\.]\d{2})"
+                    ],
+                    "tax_amount": [r"(?:MwSt|Steuer)\s*:?\s*([0-9\s,]+[,\.]\d{2})"],
                 },
                 "items": {
                     "line_item": [
@@ -497,9 +549,9 @@ class DataExtractor:
                 },
                 "payment": {
                     "payment_method": [r"(?:Zahlungsart|Zahlung)\s*:?\s*([A-Za-z\s]+)"],
-                    "bank_account": [r"(?:Kontonummer|IBAN)\s*:?\s*([A-Z0-9\s]+)"]
-                }
-            }
+                    "bank_account": [r"(?:Kontonummer|IBAN)\s*:?\s*([A-Z0-9\s]+)"],
+                },
+            },
         }
 
 

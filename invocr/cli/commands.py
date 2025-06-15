@@ -9,12 +9,12 @@ from pathlib import Path
 from typing import List, Optional
 
 import click
+from rich import print as rprint
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
-from rich import print as rprint
 
-from ..core.converter import create_converter, create_batch_converter
+from ..core.converter import create_batch_converter, create_converter
 from ..utils.config import get_settings
 from ..utils.logger import get_logger
 
@@ -39,35 +39,38 @@ def cli(verbose: bool, config: Optional[str]):
 @cli.command()
 @click.argument("input_file", type=click.Path(exists=True))
 @click.argument("output_file", type=click.Path())
-@click.option("--format", "-f", default="json",
-              type=click.Choice(["json", "xml", "html", "pdf"]),
-              help="Output format")
-@click.option("--languages", "-l", multiple=True,
-              help="OCR languages (e.g., en,pl,de)")
-@click.option("--template", "-t", default="modern",
-              help="Template for HTML/XML output")
-def convert(input_file: str, output_file: str, format: str,
-            languages: tuple, template: str):
+@click.option(
+    "--format",
+    "-f",
+    default="json",
+    type=click.Choice(["json", "xml", "html", "pdf"]),
+    help="Output format",
+)
+@click.option("--languages", "-l", multiple=True, help="OCR languages (e.g., en,pl,de)")
+@click.option("--template", "-t", default="modern", help="Template for HTML/XML output")
+def convert(
+    input_file: str, output_file: str, format: str, languages: tuple, template: str
+):
     """Convert single file between formats"""
 
     lang_list = list(languages) if languages else None
     converter = create_converter(lang_list)
 
     with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
     ) as progress:
         task = progress.add_task(f"Converting {Path(input_file).name}...")
 
         try:
-            result = converter.convert(
-                input_file, output_file, "auto", format
-            )
+            result = converter.convert(input_file, output_file, "auto", format)
 
             if result["success"]:
                 progress.update(task, description="✅ Conversion completed")
-                console.print(f"[green]✅ Successfully converted to {output_file}[/green]")
+                console.print(
+                    f"[green]✅ Successfully converted to {output_file}[/green]"
+                )
 
                 # Show metadata
                 if result.get("metadata"):
@@ -93,9 +96,13 @@ def convert(input_file: str, output_file: str, format: str,
 @cli.command()
 @click.argument("pdf_file", type=click.Path(exists=True))
 @click.argument("output_dir", type=click.Path())
-@click.option("--format", "-f", default="png",
-              type=click.Choice(["png", "jpg", "jpeg"]),
-              help="Image format")
+@click.option(
+    "--format",
+    "-f",
+    default="png",
+    type=click.Choice(["png", "jpg", "jpeg"]),
+    help="Image format",
+)
 @click.option("--dpi", "-d", default=300, help="Image resolution (DPI)")
 def pdf2img(pdf_file: str, output_dir: str, format: str, dpi: int):
     """Convert PDF to images (PDF → PNG/JPG)"""
@@ -105,9 +112,9 @@ def pdf2img(pdf_file: str, output_dir: str, format: str, dpi: int):
     output_path.mkdir(parents=True, exist_ok=True)
 
     with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
     ) as progress:
         task = progress.add_task("Converting PDF to images...")
 
@@ -115,7 +122,9 @@ def pdf2img(pdf_file: str, output_dir: str, format: str, dpi: int):
             images = converter.pdf_to_images(pdf_file, output_dir, format, dpi)
 
             progress.update(task, description=f"✅ Created {len(images)} images")
-            console.print(f"[green]✅ Created {len(images)} images in {output_dir}[/green]")
+            console.print(
+                f"[green]✅ Created {len(images)} images in {output_dir}[/green]"
+            )
 
             for img in images:
                 console.print(f"  📷 {Path(img).name}")
@@ -129,11 +138,14 @@ def pdf2img(pdf_file: str, output_dir: str, format: str, dpi: int):
 @cli.command()
 @click.argument("image_file", type=click.Path(exists=True))
 @click.argument("output_file", type=click.Path())
-@click.option("--languages", "-l", multiple=True,
-              help="OCR languages")
-@click.option("--doc-type", "-t", default="invoice",
-              type=click.Choice(["invoice", "receipt", "payment"]),
-              help="Document type")
+@click.option("--languages", "-l", multiple=True, help="OCR languages")
+@click.option(
+    "--doc-type",
+    "-t",
+    default="invoice",
+    type=click.Choice(["invoice", "receipt", "payment"]),
+    help="Document type",
+)
 def img2json(image_file: str, output_file: str, languages: tuple, doc_type: str):
     """Convert image to JSON using OCR (IMG → JSON)"""
 
@@ -141,9 +153,9 @@ def img2json(image_file: str, output_file: str, languages: tuple, doc_type: str)
     converter = create_converter(lang_list)
 
     with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
     ) as progress:
         task = progress.add_task("Extracting text with OCR...")
 
@@ -152,7 +164,7 @@ def img2json(image_file: str, output_file: str, languages: tuple, doc_type: str)
 
             progress.update(task, description="💾 Saving JSON...")
 
-            with open(output_file, 'w', encoding='utf-8') as f:
+            with open(output_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
 
             progress.update(task, description="✅ OCR completed")
@@ -160,8 +172,12 @@ def img2json(image_file: str, output_file: str, languages: tuple, doc_type: str)
 
             # Show extraction summary
             metadata = data.get("_metadata", {})
-            console.print(f"📊 Confidence: {metadata.get('ocr_confidence', 0) * 100:.1f}%")
-            console.print(f"🔤 Language: {metadata.get('detected_language', 'unknown')}")
+            console.print(
+                f"📊 Confidence: {metadata.get('ocr_confidence', 0) * 100:.1f}%"
+            )
+            console.print(
+                f"🔤 Language: {metadata.get('detected_language', 'unknown')}"
+            )
             console.print(f"📋 Items found: {len(data.get('items', []))}")
 
         except Exception as e:
@@ -173,27 +189,28 @@ def img2json(image_file: str, output_file: str, languages: tuple, doc_type: str)
 @cli.command()
 @click.argument("json_file", type=click.Path(exists=True))
 @click.argument("output_file", type=click.Path())
-@click.option("--format", "-f", default="eu_invoice",
-              help="XML format (eu_invoice, ubl, custom)")
+@click.option(
+    "--format", "-f", default="eu_invoice", help="XML format (eu_invoice, ubl, custom)"
+)
 def json2xml(json_file: str, output_file: str, format: str):
     """Convert JSON to XML (JSON → XML)"""
 
     converter = create_converter()
 
     with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
     ) as progress:
         task = progress.add_task("Converting JSON to XML...")
 
         try:
-            with open(json_file, 'r', encoding='utf-8') as f:
+            with open(json_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
 
             xml_content = converter.json_to_xml(data, format)
 
-            with open(output_file, 'w', encoding='utf-8') as f:
+            with open(output_file, "w", encoding="utf-8") as f:
                 f.write(xml_content)
 
             progress.update(task, description="✅ XML created")
@@ -209,17 +226,24 @@ def json2xml(json_file: str, output_file: str, format: str):
 @cli.command()
 @click.argument("input_dir", type=click.Path(exists=True))
 @click.argument("output_dir", type=click.Path())
-@click.option("--format", "-f", default="json",
-              type=click.Choice(["json", "xml", "html", "pdf"]),
-              help="Output format")
-@click.option("--pattern", "-p", default="*",
-              help="File pattern (e.g., *.pdf)")
-@click.option("--parallel", "-j", default=4,
-              help="Number of parallel workers")
-@click.option("--languages", "-l", multiple=True,
-              help="OCR languages")
-def batch(input_dir: str, output_dir: str, format: str,
-          pattern: str, parallel: int, languages: tuple):
+@click.option(
+    "--format",
+    "-f",
+    default="json",
+    type=click.Choice(["json", "xml", "html", "pdf"]),
+    help="Output format",
+)
+@click.option("--pattern", "-p", default="*", help="File pattern (e.g., *.pdf)")
+@click.option("--parallel", "-j", default=4, help="Number of parallel workers")
+@click.option("--languages", "-l", multiple=True, help="OCR languages")
+def batch(
+    input_dir: str,
+    output_dir: str,
+    format: str,
+    pattern: str,
+    parallel: int,
+    languages: tuple,
+):
     """Batch convert multiple files"""
 
     lang_list = list(languages) if languages else None
@@ -235,9 +259,9 @@ def batch(input_dir: str, output_dir: str, format: str,
     console.print(f"📁 Found {len(files)} files to process")
 
     with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
     ) as progress:
         task = progress.add_task("Processing files...")
 
@@ -255,7 +279,9 @@ def batch(input_dir: str, output_dir: str, format: str,
             successful = sum(1 for r in results if r["success"])
             failed = len(results) - successful
 
-            progress.update(task, description=f"✅ Completed: {successful}/{len(results)}")
+            progress.update(
+                task, description=f"✅ Completed: {successful}/{len(results)}"
+            )
 
             table = Table(title="Batch Conversion Results")
             table.add_column("File", style="cyan")
@@ -283,8 +309,7 @@ def batch(input_dir: str, output_dir: str, format: str,
 @cli.command()
 @click.argument("input_file", type=click.Path(exists=True))
 @click.argument("output_dir", type=click.Path())
-@click.option("--languages", "-l", multiple=True,
-              help="OCR languages")
+@click.option("--languages", "-l", multiple=True, help="OCR languages")
 def pipeline(input_file: str, output_dir: str, languages: tuple):
     """Full conversion pipeline: PDF → IMG → JSON → XML → HTML → PDF"""
 
@@ -301,13 +326,13 @@ def pipeline(input_file: str, output_dir: str, languages: tuple):
         ("🔍 OCR → JSON", "img2json"),
         ("📋 JSON → XML", "json2xml"),
         ("🌐 JSON → HTML", "json2html"),
-        ("📑 HTML → PDF", "html2pdf")
+        ("📑 HTML → PDF", "html2pdf"),
     ]
 
     with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
     ) as progress:
 
         current_file = input_file
@@ -326,20 +351,20 @@ def pipeline(input_file: str, output_dir: str, languages: tuple):
                 elif stage_type == "img2json":
                     json_file = output_path / f"{file_stem}.json"
                     json_data = converter.image_to_json(current_file)
-                    with open(json_file, 'w', encoding='utf-8') as f:
+                    with open(json_file, "w", encoding="utf-8") as f:
                         json.dump(json_data, f, ensure_ascii=False, indent=2)
                     current_file = json_file
 
                 elif stage_type == "json2xml":
                     xml_file = output_path / f"{file_stem}.xml"
                     xml_content = converter.json_to_xml(json_data)
-                    with open(xml_file, 'w', encoding='utf-8') as f:
+                    with open(xml_file, "w", encoding="utf-8") as f:
                         f.write(xml_content)
 
                 elif stage_type == "json2html":
                     html_file = output_path / f"{file_stem}.html"
                     html_content = converter.json_to_html(json_data)
-                    with open(html_file, 'w', encoding='utf-8') as f:
+                    with open(html_file, "w", encoding="utf-8") as f:
                         f.write(html_content)
                     current_file = html_file
 
@@ -364,17 +389,14 @@ def pipeline(input_file: str, output_dir: str, languages: tuple):
 def serve(host: str, port: int, reload: bool):
     """Start the REST API server"""
     import uvicorn
+
     from ..api.main import app
 
     console.print(f"🚀 Starting InvOCR API server on {host}:{port}")
     console.print(f"📖 API docs: http://{host}:{port}/docs")
 
     uvicorn.run(
-        "invocr.api.main:app",
-        host=host,
-        port=port,
-        reload=reload,
-        log_level="info"
+        "invocr.api.main:app", host=host, port=port, reload=reload, log_level="info"
     )
 
 
@@ -409,12 +431,14 @@ def info():
     # Check dependencies
     try:
         import tesseract
+
         table.add_row("Tesseract", "✅ Available")
     except ImportError:
         table.add_row("Tesseract", "❌ Not available")
 
     try:
         import easyocr
+
         table.add_row("EasyOCR", "✅ Available")
     except ImportError:
         table.add_row("EasyOCR", "❌ Not available")

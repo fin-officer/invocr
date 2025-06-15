@@ -10,19 +10,23 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 import aiofiles
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile, BackgroundTasks
+from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from ..core.converter import create_converter, create_batch_converter
+from ..core.converter import create_batch_converter, create_converter
 from ..utils.config import get_settings
 from ..utils.logger import get_logger
 from .models import (
-    ConversionRequest, ConversionResponse, ConversionStatus,
-    BatchConversionRequest, BatchConversionResponse,
-    HealthResponse, SystemInfo
+    BatchConversionRequest,
+    BatchConversionResponse,
+    ConversionRequest,
+    ConversionResponse,
+    ConversionStatus,
+    HealthResponse,
+    SystemInfo,
 )
 
 # Initialize
@@ -33,7 +37,7 @@ app = FastAPI(
     description="Invoice OCR and Conversion System",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
 )
 
 # CORS middleware
@@ -63,7 +67,7 @@ async def root():
         "message": "InvOCR API v1.0.0",
         "docs": "/docs",
         "health": "/health",
-        "status": "operational"
+        "status": "operational",
     }
 
 
@@ -79,8 +83,8 @@ async def health_check():
             "services": {
                 "ocr": "operational",
                 "converter": "operational",
-                "storage": "operational"
-            }
+                "storage": "operational",
+            },
         }
 
         # Check OCR engines
@@ -99,7 +103,7 @@ async def health_check():
             status="unhealthy",
             timestamp="2025-06-15T12:00:00Z",
             version="1.0.0",
-            services={"ocr": "error", "converter": "error", "storage": "error"}
+            services={"ocr": "error", "converter": "error", "storage": "error"},
         )
 
 
@@ -110,7 +114,7 @@ async def system_info():
         version="1.0.0",
         supported_formats={
             "input": ["pdf", "png", "jpg", "jpeg", "tiff", "bmp"],
-            "output": ["json", "xml", "html", "pdf"]
+            "output": ["json", "xml", "html", "pdf"],
         },
         supported_languages=["en", "pl", "de", "fr", "es", "it"],
         max_file_size="50MB",
@@ -119,8 +123,8 @@ async def system_info():
             "Format conversion",
             "Batch processing",
             "Multi-language support",
-            "EU invoice XML format"
-        ]
+            "EU invoice XML format",
+        ],
     )
 
 
@@ -131,7 +135,7 @@ async def convert_file(
     target_format: str = Form("json"),
     languages: Optional[str] = Form(None),
     template: str = Form("modern"),
-    async_processing: bool = Form(False)
+    async_processing: bool = Form(False),
 ):
     """
     Convert uploaded file to specified format
@@ -162,7 +166,7 @@ async def convert_file(
     input_path = upload_dir / f"{job_id}_{file.filename}"
 
     try:
-        async with aiofiles.open(input_path, 'wb') as f:
+        async with aiofiles.open(input_path, "wb") as f:
             content = await file.read()
             await f.write(content)
 
@@ -178,19 +182,23 @@ async def convert_file(
                 "input_file": str(input_path),
                 "output_file": str(output_path),
                 "target_format": target_format,
-                "created_at": "2025-06-15T12:00:00Z"
+                "created_at": "2025-06-15T12:00:00Z",
             }
 
             background_tasks.add_task(
                 process_conversion_async,
-                job_id, input_path, output_path, target_format, lang_list
+                job_id,
+                input_path,
+                output_path,
+                target_format,
+                lang_list,
             )
 
             return ConversionResponse(
                 job_id=job_id,
                 status="processing",
                 message="Conversion started in background",
-                download_url=f"/download/{job_id}"
+                download_url=f"/download/{job_id}",
             )
 
         else:
@@ -206,12 +214,11 @@ async def convert_file(
                     status="completed",
                     message="Conversion completed successfully",
                     download_url=f"/download/{job_id}",
-                    metadata=result.get("metadata", {})
+                    metadata=result.get("metadata", {}),
                 )
             else:
                 raise HTTPException(
-                    status_code=500,
-                    detail=f"Conversion failed: {result.get('error')}"
+                    status_code=500, detail=f"Conversion failed: {result.get('error')}"
                 )
 
     except Exception as e:
@@ -228,13 +235,11 @@ async def convert_file(
 
 @app.post("/convert/pdf2img")
 async def pdf_to_images(
-    file: UploadFile = File(...),
-    format: str = Form("png"),
-    dpi: int = Form(300)
+    file: UploadFile = File(...), format: str = Form("png"), dpi: int = Form(300)
 ):
     """Convert PDF to images"""
 
-    if not file.filename or not file.filename.lower().endswith('.pdf'):
+    if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="PDF file required")
 
     job_id = str(uuid.uuid4())
@@ -245,7 +250,7 @@ async def pdf_to_images(
     pdf_path = upload_dir / f"{job_id}_{file.filename}"
 
     try:
-        async with aiofiles.open(pdf_path, 'wb') as f:
+        async with aiofiles.open(pdf_path, "wb") as f:
             content = await file.read()
             await f.write(content)
 
@@ -259,7 +264,7 @@ async def pdf_to_images(
             "job_id": job_id,
             "status": "completed",
             "images": [f"/download/{job_id}/{Path(img).name}" for img in images],
-            "count": len(images)
+            "count": len(images),
         }
 
     except Exception as e:
@@ -277,7 +282,7 @@ async def pdf_to_images(
 async def image_to_json(
     file: UploadFile = File(...),
     languages: Optional[str] = Form(None),
-    document_type: str = Form("invoice")
+    document_type: str = Form("invoice"),
 ):
     """Convert image to JSON using OCR"""
 
@@ -285,7 +290,7 @@ async def image_to_json(
         raise HTTPException(status_code=400, detail="Image file required")
 
     # Check file type
-    allowed_types = ['.png', '.jpg', '.jpeg', '.tiff', '.bmp']
+    allowed_types = [".png", ".jpg", ".jpeg", ".tiff", ".bmp"]
     if not any(file.filename.lower().endswith(ext) for ext in allowed_types):
         raise HTTPException(status_code=400, detail="Unsupported image format")
 
@@ -300,7 +305,7 @@ async def image_to_json(
     image_path = upload_dir / f"{job_id}_{file.filename}"
 
     try:
-        async with aiofiles.open(image_path, 'wb') as f:
+        async with aiofiles.open(image_path, "wb") as f:
             content = await file.read()
             await f.write(content)
 
@@ -312,7 +317,7 @@ async def image_to_json(
             "job_id": job_id,
             "status": "completed",
             "data": data,
-            "metadata": data.get("_metadata", {})
+            "metadata": data.get("_metadata", {}),
         }
 
     except Exception as e:
@@ -328,8 +333,7 @@ async def image_to_json(
 
 @app.post("/batch/convert", response_model=BatchConversionResponse)
 async def batch_convert(
-    background_tasks: BackgroundTasks,
-    request: BatchConversionRequest
+    background_tasks: BackgroundTasks, request: BatchConversionRequest
 ):
     """Batch convert multiple files"""
 
@@ -342,14 +346,11 @@ async def batch_convert(
         "total_files": len(request.file_urls),
         "completed_files": 0,
         "target_format": request.target_format,
-        "created_at": "2025-06-15T12:00:00Z"
+        "created_at": "2025-06-15T12:00:00Z",
     }
 
     # Process in background
-    background_tasks.add_task(
-        process_batch_conversion,
-        job_id, request
-    )
+    background_tasks.add_task(process_batch_conversion, job_id, request)
 
     return BatchConversionResponse(
         job_id=job_id,
@@ -357,7 +358,7 @@ async def batch_convert(
         message="Batch conversion started",
         total_files=len(request.file_urls),
         completed_files=0,
-        results_url=f"/batch/results/{job_id}"
+        results_url=f"/batch/results/{job_id}",
     )
 
 
@@ -377,7 +378,7 @@ async def get_job_status(job_id: str):
         message=job.get("message", ""),
         created_at=job["created_at"],
         completed_at=job.get("completed_at"),
-        error=job.get("error")
+        error=job.get("error"),
     )
 
 
@@ -400,7 +401,7 @@ async def download_result(job_id: str):
     return FileResponse(
         output_file,
         filename=Path(output_file).name,
-        media_type="application/octet-stream"
+        media_type="application/octet-stream",
     )
 
 
@@ -415,9 +416,7 @@ async def download_batch_file(job_id: str, filename: str):
         raise HTTPException(status_code=404, detail="File not found")
 
     return FileResponse(
-        file_path,
-        filename=filename,
-        media_type="application/octet-stream"
+        file_path, filename=filename, media_type="application/octet-stream"
     )
 
 
@@ -439,6 +438,7 @@ async def delete_job(job_id: str):
         output_dir = Path(settings.output_dir) / job_id
         if output_dir.exists():
             import shutil
+
             shutil.rmtree(output_dir)
 
     except Exception as e:
@@ -460,7 +460,7 @@ async def list_jobs():
                 "job_id": job_id,
                 "status": job["status"],
                 "type": job.get("type", "single"),
-                "created_at": job["created_at"]
+                "created_at": job["created_at"],
             }
             for job_id, job in jobs.items()
         ]
@@ -468,8 +468,11 @@ async def list_jobs():
 
 
 async def process_conversion_async(
-    job_id: str, input_path: Path, output_path: Path,
-    target_format: str, languages: Optional[List[str]]
+    job_id: str,
+    input_path: Path,
+    output_path: Path,
+    target_format: str,
+    languages: Optional[List[str]],
 ):
     """Process conversion asynchronously"""
 
@@ -483,9 +486,7 @@ async def process_conversion_async(
         jobs[job_id]["progress"] = 30
 
         # Perform conversion
-        result = file_converter.convert(
-            input_path, output_path, "auto", target_format
-        )
+        result = file_converter.convert(input_path, output_path, "auto", target_format)
 
         if result["success"]:
             jobs[job_id]["status"] = "completed"
@@ -527,20 +528,22 @@ async def process_batch_conversion(job_id: str, request: BatchConversionRequest)
 
                 completed += 1
                 jobs[job_id]["completed_files"] = completed
-                jobs[job_id]["progress"] = int((completed / len(request.file_urls)) * 100)
+                jobs[job_id]["progress"] = int(
+                    (completed / len(request.file_urls)) * 100
+                )
 
-                results.append({
-                    "file_url": file_url,
-                    "status": "completed",
-                    "output_file": f"converted_{i}.{request.target_format}"
-                })
+                results.append(
+                    {
+                        "file_url": file_url,
+                        "status": "completed",
+                        "output_file": f"converted_{i}.{request.target_format}",
+                    }
+                )
 
             except Exception as e:
-                results.append({
-                    "file_url": file_url,
-                    "status": "failed",
-                    "error": str(e)
-                })
+                results.append(
+                    {"file_url": file_url, "status": "failed", "error": str(e)}
+                )
 
         jobs[job_id]["status"] = "completed"
         jobs[job_id]["results"] = results
@@ -555,6 +558,7 @@ async def process_batch_conversion(job_id: str, request: BatchConversionRequest)
 def run_api():
     """Run the API server"""
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)
 
 

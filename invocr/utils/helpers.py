@@ -8,10 +8,10 @@ import json
 import re
 import tempfile
 import time
+import unicodedata
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
-import unicodedata
 
 from .logger import get_logger
 
@@ -48,22 +48,22 @@ def clean_filename(filename: str, max_length: int = 255) -> str:
         Cleaned filename
     """
     # Remove or replace invalid characters
-    filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
+    filename = re.sub(r'[<>:"/\\|?*]', "_", filename)
 
     # Remove control characters
-    filename = ''.join(char for char in filename if ord(char) >= 32)
+    filename = "".join(char for char in filename if ord(char) >= 32)
 
     # Normalize unicode characters
-    filename = unicodedata.normalize('NFKD', filename)
-    filename = filename.encode('ascii', 'ignore').decode('ascii')
+    filename = unicodedata.normalize("NFKD", filename)
+    filename = filename.encode("ascii", "ignore").decode("ascii")
 
     # Remove multiple underscores and spaces
-    filename = re.sub(r'[_\s]+', '_', filename)
+    filename = re.sub(r"[_\s]+", "_", filename)
 
     # Trim and ensure not empty
-    filename = filename.strip('_. ')
+    filename = filename.strip("_. ")
     if not filename:
-        filename = 'untitled'
+        filename = "untitled"
 
     # Truncate if too long
     if len(filename) > max_length:
@@ -74,7 +74,7 @@ def clean_filename(filename: str, max_length: int = 255) -> str:
     return filename
 
 
-def get_file_hash(file_path: Union[str, Path], algorithm: str = 'sha256') -> str:
+def get_file_hash(file_path: Union[str, Path], algorithm: str = "sha256") -> str:
     """
     Calculate file hash
 
@@ -87,7 +87,7 @@ def get_file_hash(file_path: Union[str, Path], algorithm: str = 'sha256') -> str
     """
     hash_func = hashlib.new(algorithm)
 
-    with open(file_path, 'rb') as f:
+    with open(file_path, "rb") as f:
         for chunk in iter(lambda: f.read(8192), b""):
             hash_func.update(chunk)
 
@@ -168,17 +168,17 @@ def extract_numbers(text: str) -> List[float]:
         List of extracted numbers
     """
     # Pattern for numbers (including decimals, commas, currency)
-    pattern = r'[\d\s]*[\d,]+[.,]?\d*'
+    pattern = r"[\d\s]*[\d,]+[.,]?\d*"
     matches = re.findall(pattern, text)
 
     numbers = []
     for match in matches:
         # Clean and convert
-        cleaned = re.sub(r'[^\d,.]', '', match)
-        cleaned = cleaned.replace(',', '.')
+        cleaned = re.sub(r"[^\d,.]", "", match)
+        cleaned = cleaned.replace(",", ".")
 
         try:
-            if '.' in cleaned:
+            if "." in cleaned:
                 numbers.append(float(cleaned))
             else:
                 numbers.append(float(cleaned))
@@ -199,22 +199,23 @@ def normalize_text(text: str) -> str:
         Normalized text
     """
     # Remove excessive whitespace
-    text = re.sub(r'\s+', ' ', text)
+    text = re.sub(r"\s+", " ", text)
 
     # Normalize line breaks
-    text = re.sub(r'\r\n|\r', '\n', text)
+    text = re.sub(r"\r\n|\r", "\n", text)
 
     # Remove trailing/leading whitespace
     text = text.strip()
 
     # Normalize unicode
-    text = unicodedata.normalize('NFKC', text)
+    text = unicodedata.normalize("NFKC", text)
 
     return text
 
 
-def create_temp_file(suffix: str = '', prefix: str = 'invocr_',
-                     directory: Optional[Path] = None) -> str:
+def create_temp_file(
+    suffix: str = "", prefix: str = "invocr_", directory: Optional[Path] = None
+) -> str:
     """
     Create temporary file
 
@@ -226,21 +227,18 @@ def create_temp_file(suffix: str = '', prefix: str = 'invocr_',
     Returns:
         Temporary file path
     """
-    fd, path = tempfile.mkstemp(
-        suffix=suffix,
-        prefix=prefix,
-        dir=directory
-    )
+    fd, path = tempfile.mkstemp(suffix=suffix, prefix=prefix, dir=directory)
     # Close file descriptor
     import os
+
     os.close(fd)
 
     return path
 
 
-def cleanup_temp_files(directory: Union[str, Path],
-                       pattern: str = 'invocr_*',
-                       max_age_hours: int = 24) -> int:
+def cleanup_temp_files(
+    directory: Union[str, Path], pattern: str = "invocr_*", max_age_hours: int = 24
+) -> int:
     """
     Cleanup old temporary files
 
@@ -273,6 +271,19 @@ def cleanup_temp_files(directory: Union[str, Path],
     return cleaned_count
 
 
+def get_file_extension(filename: str) -> str:
+    """
+    Get file extension in lowercase without the dot
+
+    Args:
+        filename: Filename or path
+
+    Returns:
+        File extension in lowercase without dot
+    """
+    return Path(filename).suffix.lstrip('.').lower()
+
+
 def validate_file_extension(filename: str, allowed_extensions: List[str]) -> bool:
     """
     Validate file extension
@@ -287,11 +298,11 @@ def validate_file_extension(filename: str, allowed_extensions: List[str]) -> boo
     if not filename:
         return False
 
-    extension = Path(filename).suffix.lower().lstrip('.')
-    return extension in [ext.lower().lstrip('.') for ext in allowed_extensions]
+    extension = Path(filename).suffix.lower().lstrip(".")
+    return extension in [ext.lower().lstrip(".") for ext in allowed_extensions]
 
 
-def generate_job_id(prefix: str = '') -> str:
+def generate_job_id(prefix: str = "") -> str:
     """
     Generate unique job ID
 
@@ -302,6 +313,7 @@ def generate_job_id(prefix: str = '') -> str:
         Unique job ID
     """
     import uuid
+
     job_id = str(uuid.uuid4())
 
     if prefix:
@@ -347,8 +359,7 @@ def format_duration(seconds: float) -> str:
         return f"{hours}h {minutes}m"
 
 
-def retry_on_failure(max_attempts: int = 3, delay: float = 1.0,
-                     backoff: float = 2.0):
+def retry_on_failure(max_attempts: int = 3, delay: float = 1.0, backoff: float = 2.0):
     """
     Decorator for retrying failed operations
 
@@ -371,9 +382,7 @@ def retry_on_failure(max_attempts: int = 3, delay: float = 1.0,
                     return func(*args, **kwargs)
                 except Exception as e:
                     last_exception = e
-                    logger.warning(
-                        f"Attempt {attempt + 1}/{max_attempts} failed: {e}"
-                    )
+                    logger.warning(f"Attempt {attempt + 1}/{max_attempts} failed: {e}")
 
                     if attempt < max_attempts - 1:
                         time.sleep(current_delay)
@@ -388,8 +397,9 @@ def retry_on_failure(max_attempts: int = 3, delay: float = 1.0,
     return decorator
 
 
-def batch_process(items: List[Any], batch_size: int = 10,
-                  processor_func=None) -> List[Any]:
+def batch_process(
+    items: List[Any], batch_size: int = 10, processor_func=None
+) -> List[Any]:
     """
     Process items in batches
 
@@ -404,11 +414,13 @@ def batch_process(items: List[Any], batch_size: int = 10,
     results = []
 
     for i in range(0, len(items), batch_size):
-        batch = items[i:i + batch_size]
+        batch = items[i : i + batch_size]
 
         if processor_func:
             batch_result = processor_func(batch)
-            results.extend(batch_result if isinstance(batch_result, list) else [batch_result])
+            results.extend(
+                batch_result if isinstance(batch_result, list) else [batch_result]
+            )
         else:
             results.extend(batch)
 
@@ -435,7 +447,7 @@ def measure_performance(func):
             f"Performance: {func.__name__} took {duration:.3f}s",
             function=func.__name__,
             duration=duration,
-            operation="performance_measurement"
+            operation="performance_measurement",
         )
 
         return result
@@ -463,7 +475,7 @@ def sanitize_input(text: str, max_length: int = 1000000) -> str:
         logger.warning(f"Input truncated to {max_length} characters")
 
     # Remove null bytes and control characters (except newlines and tabs)
-    text = ''.join(char for char in text if ord(char) >= 32 or char in '\n\t\r')
+    text = "".join(char for char in text if ord(char) >= 32 or char in "\n\t\r")
 
     return text
 
@@ -509,21 +521,21 @@ def parse_currency_amount(text: str) -> Optional[float]:
         Parsed amount or None
     """
     # Remove currency symbols and spaces
-    cleaned = re.sub(r'[^\d,.-]', '', text)
+    cleaned = re.sub(r"[^\d,.-]", "", text)
 
     # Handle different decimal separators
-    if ',' in cleaned and '.' in cleaned:
+    if "," in cleaned and "." in cleaned:
         # Assume last separator is decimal
-        if cleaned.rfind(',') > cleaned.rfind('.'):
-            cleaned = cleaned.replace('.', '').replace(',', '.')
+        if cleaned.rfind(",") > cleaned.rfind("."):
+            cleaned = cleaned.replace(".", "").replace(",", ".")
         else:
-            cleaned = cleaned.replace(',', '')
-    elif ',' in cleaned:
+            cleaned = cleaned.replace(",", "")
+    elif "," in cleaned:
         # Check if it's likely a thousands separator
-        if re.search(r',\d{3}(?!\d)', cleaned):
-            cleaned = cleaned.replace(',', '')
+        if re.search(r",\d{3}(?!\d)", cleaned):
+            cleaned = cleaned.replace(",", "")
         else:
-            cleaned = cleaned.replace(',', '.')
+            cleaned = cleaned.replace(",", ".")
 
     try:
         return float(cleaned)

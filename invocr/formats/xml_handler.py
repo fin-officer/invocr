@@ -3,11 +3,11 @@ XML Handler for European Invoice Format
 Supports EU standard invoice XML structure
 """
 
+import json
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, Optional
-import json
+from typing import Any, Dict, Optional
 
 from ..utils.logger import get_logger
 
@@ -19,10 +19,7 @@ class XMLHandler:
 
     def __init__(self):
         self.namespaces = {
-            'eu_invoice': {
-                'prefix': 'inv',
-                'uri': 'urn:eu:invoice:standard:2024'
-            }
+            "eu_invoice": {"prefix": "inv", "uri": "urn:eu:invoice:standard:2024"}
         }
 
     def to_xml(self, data: Dict[str, Any], format_type: str = "eu_invoice") -> str:
@@ -54,7 +51,7 @@ class XMLHandler:
             Invoice data dictionary
         """
         if Path(xml_input).exists():
-            with open(xml_input, 'r', encoding='utf-8') as f:
+            with open(xml_input, "r", encoding="utf-8") as f:
                 xml_content = f.read()
         else:
             xml_content = xml_input
@@ -63,7 +60,7 @@ class XMLHandler:
             root = ET.fromstring(xml_content)
 
             # Detect XML format and parse accordingly
-            if 'invoice' in root.tag.lower():
+            if "invoice" in root.tag.lower():
                 return self._from_eu_invoice_xml(root)
             else:
                 return self._from_generic_xml(root)
@@ -77,7 +74,7 @@ class XMLHandler:
 
         # Create root element with namespace
         root = ET.Element("Invoice")
-        root.set("xmlns", self.namespaces['eu_invoice']['uri'])
+        root.set("xmlns", self.namespaces["eu_invoice"]["uri"])
         root.set("version", "2024.1")
 
         # Document information
@@ -102,9 +99,15 @@ class XMLHandler:
         seller_address = ET.SubElement(seller_elem, "PostalAddress")
         address_parts = seller.get("address", "").split("\n")
         if address_parts:
-            ET.SubElement(seller_address, "StreetName").text = address_parts[0] if len(address_parts) > 0 else ""
-            ET.SubElement(seller_address, "CityName").text = address_parts[1] if len(address_parts) > 1 else ""
-            ET.SubElement(seller_address, "CountryCode").text = "PL"  # Default to Poland
+            ET.SubElement(seller_address, "StreetName").text = (
+                address_parts[0] if len(address_parts) > 0 else ""
+            )
+            ET.SubElement(seller_address, "CityName").text = (
+                address_parts[1] if len(address_parts) > 1 else ""
+            )
+            ET.SubElement(seller_address, "CountryCode").text = (
+                "PL"  # Default to Poland
+            )
 
         seller_contact = ET.SubElement(seller_elem, "Contact")
         ET.SubElement(seller_contact, "Telephone").text = seller.get("phone", "")
@@ -124,10 +127,12 @@ class XMLHandler:
         buyer_address = ET.SubElement(buyer_elem, "PostalAddress")
         buyer_address_parts = buyer.get("address", "").split("\n")
         if buyer_address_parts:
-            ET.SubElement(buyer_address, "StreetName").text = buyer_address_parts[0] if len(
-                buyer_address_parts) > 0 else ""
-            ET.SubElement(buyer_address, "CityName").text = buyer_address_parts[1] if len(
-                buyer_address_parts) > 1 else ""
+            ET.SubElement(buyer_address, "StreetName").text = (
+                buyer_address_parts[0] if len(buyer_address_parts) > 0 else ""
+            )
+            ET.SubElement(buyer_address, "CityName").text = (
+                buyer_address_parts[1] if len(buyer_address_parts) > 1 else ""
+            )
             ET.SubElement(buyer_address, "CountryCode").text = "PL"
 
         # Invoice lines
@@ -227,7 +232,7 @@ class XMLHandler:
 
         # Convert to string with proper formatting
         self._indent_xml(root)
-        xml_str = ET.tostring(root, encoding='unicode', method='xml')
+        xml_str = ET.tostring(root, encoding="unicode", method="xml")
 
         # Add XML declaration
         return f'<?xml version="1.0" encoding="UTF-8"?>\n{xml_str}'
@@ -245,7 +250,7 @@ class XMLHandler:
 
         # Convert and return
         self._indent_xml(root)
-        xml_str = ET.tostring(root, encoding='unicode', method='xml')
+        xml_str = ET.tostring(root, encoding="unicode", method="xml")
         return f'<?xml version="1.0" encoding="UTF-8"?>\n{xml_str}'
 
     def _to_generic_xml(self, data: Dict[str, Any]) -> str:
@@ -259,7 +264,9 @@ class XMLHandler:
                     dict_to_xml(child, value)
                 elif isinstance(value, list):
                     for item in value:
-                        child = ET.SubElement(parent, key[:-1])  # Remove 's' from plural
+                        child = ET.SubElement(
+                            parent, key[:-1]
+                        )  # Remove 's' from plural
                         if isinstance(item, dict):
                             dict_to_xml(child, item)
                         else:
@@ -270,7 +277,7 @@ class XMLHandler:
         dict_to_xml(root, data)
 
         self._indent_xml(root)
-        xml_str = ET.tostring(root, encoding='unicode', method='xml')
+        xml_str = ET.tostring(root, encoding="unicode", method="xml")
         return f'<?xml version="1.0" encoding="UTF-8"?>\n{xml_str}'
 
     def _from_eu_invoice_xml(self, root: ET.Element) -> Dict[str, Any]:
@@ -282,7 +289,7 @@ class XMLHandler:
             "seller": {},
             "buyer": {},
             "items": [],
-            "totals": {}
+            "totals": {},
         }
 
         # Extract document info
@@ -300,7 +307,7 @@ class XMLHandler:
                 "tax_id": self._get_text(seller_elem, "PartyIdentification/ID"),
                 "address": self._extract_address(seller_elem),
                 "phone": self._get_text(seller_elem, "Contact/Telephone"),
-                "email": self._get_text(seller_elem, "Contact/ElectronicMail")
+                "email": self._get_text(seller_elem, "Contact/ElectronicMail"),
             }
 
         # Extract buyer info
@@ -311,7 +318,7 @@ class XMLHandler:
                 "tax_id": self._get_text(buyer_elem, "PartyIdentification/ID"),
                 "address": self._extract_address(buyer_elem),
                 "phone": self._get_text(buyer_elem, "Contact/Telephone"),
-                "email": self._get_text(buyer_elem, "Contact/ElectronicMail")
+                "email": self._get_text(buyer_elem, "Contact/ElectronicMail"),
             }
 
         # Extract line items
@@ -321,8 +328,12 @@ class XMLHandler:
                 item = {
                     "description": self._get_text(line, "Item/Description"),
                     "quantity": float(self._get_text(line, "InvoicedQuantity") or "1"),
-                    "unit_price": float(self._get_text(line, "Price/PriceAmount") or "0"),
-                    "total_price": float(self._get_text(line, "LineExtensionAmount") or "0")
+                    "unit_price": float(
+                        self._get_text(line, "Price/PriceAmount") or "0"
+                    ),
+                    "total_price": float(
+                        self._get_text(line, "LineExtensionAmount") or "0"
+                    ),
                 }
                 data["items"].append(item)
 
@@ -330,10 +341,12 @@ class XMLHandler:
         monetary_total = root.find("LegalMonetaryTotal")
         if monetary_total is not None:
             data["totals"] = {
-                "subtotal": float(self._get_text(monetary_total, "TaxExclusiveAmount") or "0"),
+                "subtotal": float(
+                    self._get_text(monetary_total, "TaxExclusiveAmount") or "0"
+                ),
                 "tax_amount": float(self._get_text(root, "TaxTotal/TaxAmount") or "0"),
                 "total": float(self._get_text(monetary_total, "PayableAmount") or "0"),
-                "tax_rate": 23.0
+                "tax_rate": 23.0,
             }
 
         return data

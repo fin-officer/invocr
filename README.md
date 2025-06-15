@@ -1,39 +1,82 @@
-# InvOCR - Invoice OCR & Conversion System
+# InvOCR - Intelligent Invoice Processing
 
-> 🔍 Universal document processing system with OCR capabilities for invoices, receipts, and financial documents
+> 🔍 Enterprise-grade document processing with advanced OCR for invoices, receipts, and financial documents
 
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104%2B-green.svg)](https://fastapi.tiangolo.com/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
-[![License: Apache](https://img.shields.io/badge/License-Apache-yellow.svg)](https://opensource.org/licenses/Apache)
+[![License](https://img.shields.io/badge/License-Apache%202.0-yellow.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-## 🚀 Features
+**InvOCR** is a powerful document processing system that automates the extraction and conversion of financial documents. It supports multiple input formats (PDF, images) and output formats (JSON, XML, HTML, PDF) with multi-language OCR capabilities.
 
-### 📄 Document Processing
-- **PDF → Images** (PNG/JPG) with configurable DPI
-- **Image → JSON** using advanced OCR (Tesseract + EasyOCR)
-- **PDF → JSON** (direct text + OCR fallback)
-- **JSON → XML** (EU Invoice standard format)
-- **JSON → HTML** (responsive templates)
-- **HTML → PDF** (professional output)
+## 🚀 Key Features
 
-### 🌍 Multi-language Support
-- English, Polish, German, French, Spanish, Italian
-- Auto-detection of document language
-- Custom language combinations
+### 📄 Document Processing Pipeline
+- **Input Formats**: PDF, PNG, JPG, TIFF
+- **Output Formats**: JSON, XML, HTML, PDF
+- **Conversion Workflows**:
+  - PDF/Image → Text (OCR)
+  - Text → Structured Data
+  - Data → Standard Formats (EU XML, HTML, PDF)
 
-### 📋 Document Types
-- ✅ **Invoices** (commercial invoices)
-- ✅ **Receipts** (retail receipts)
-- ✅ **Payment confirmations**
-- ✅ **Financial documents**
-- ✅ **Custom business documents**
+### 🔍 Advanced OCR Capabilities
+- **Multi-engine Support**: Tesseract OCR + EasyOCR
+- **Language Support**: English, Polish, German, French, Spanish, Italian
+- **Smart Features**:
+  - Auto-language detection
+  - Layout analysis
+  - Table extraction
+  - Signature detection
 
-### 🔧 Interfaces
-- **CLI** - Command line interface
-- **REST API** - Web API with OpenAPI docs
-- **Docker** - Containerized deployment
-- **Batch processing** - Multiple files
+### 🛠️ Technical Highlights
+- **REST API**: FastAPI-based, async-ready
+- **CLI**: Intuitive command-line interface
+- **Docker Support**: Easy deployment
+- **Batch Processing**: Process multiple documents
+- **Templating System**: Customizable output formats
+- **Validation**: Built-in data validation
+
+### 📋 Supported Document Types
+| Type | Description | Key Features |
+|------|-------------|--------------|
+| **Invoices** | Commercial invoices | Line items, totals, tax details |
+| **Receipts** | Retail receipts | Merchant info, items, totals |
+| **Bills** | Utility bills | Account info, payment details |
+| **Bank Statements** | Account statements | Transactions, balances |
+| **Custom** | Any document | Configurable templates |
+
+## 🛠️ Basic Usage
+
+### Using the CLI
+
+```bash
+# Convert PDF to JSON
+invocr convert invoice.pdf output.json
+
+# Process image with specific languages
+invocr img2json receipt.jpg --languages en,pl,de
+
+# Start the API server
+invocr serve
+
+# Run batch processing
+invocr batch ./invoices/ ./output/ --format xml
+```
+
+### Using the API
+
+```python
+import requests
+
+# Convert document
+response = requests.post(
+    "http://localhost:8000/convert",
+    files={"file": open("document.pdf", "rb")},
+    data={"target_format": "json"}
+)
+print(response.json())
+```
 
 ## 🏗️ Project Structure
 
@@ -75,32 +118,106 @@ invocr/
 └── 📖 README.md              # This file
 ```
 
-## ⚡ Quick Start
+## 🚀 Quick Start
 
-### Option 1: Auto Installation (Recommended)
+### Prerequisites
+- Python 3.9+
+- Tesseract OCR 4.0+
+- Poppler Utils
+- Docker (optional)
 
+### Installation
+
+#### Option 1: Using Docker (Recommended)
 ```bash
 # Clone repository
-git clone https://github.com/your-username/invocr.git
+git clone https://github.com/fin-officer/invocr.git
 cd invocr
 
-# Run installation script
-chmod +x scripts/install.sh
-./scripts/install.sh
+# Build and start services
+docker-compose up -d --build
+
+# Access the API at http://localhost:8000
+# View API docs at http://localhost:8000/docs
 ```
 
-### Option 2: Manual Installation
+#### Option 2: Local Installation
 
+1. Install system dependencies (Ubuntu/Debian):
 ```bash
-# Install system dependencies (Ubuntu/Debian)
 sudo apt update
-sudo apt install -y tesseract-ocr tesseract-ocr-pol poppler-utils \
-    libpango-1.0-0 libharfbuzz0b python3-dev build-essential
+sudo apt install -y tesseract-ocr tesseract-ocr-pol tesseract-ocr-deu \
+    tesseract-ocr-fra tesseract-ocr-spa tesseract-ocr-ita \
+    poppler-utils libpango-1.0-0 libharfbuzz0b python3-dev build-essential
+```
 
-# Install Poetry
+2. Install Python dependencies:
+```bash
+# Install Poetry if not installed
 curl -sSL https://install.python-poetry.org | python3 -
 
-# Install Python dependencies
+
+## 🚀 Development
+
+### Running Tests
+```bash
+# Run all tests
+poetry run pytest
+
+# Run tests with coverage
+poetry run pytest --cov=invocr --cov-report=html
+```
+
+### Code Quality
+```bash
+# Run linters
+poetry run flake8 invocr/
+poetry run mypy invocr/
+
+# Format code
+poetry run black invocr/ tests/
+poetry run isort invocr/ tests/
+```
+
+### Building the Package
+```bash
+# Build package
+poetry build
+
+# Publish to PyPI (requires credentials)
+poetry publish
+```
+
+## 📚 Documentation
+
+For detailed documentation, see:
+- [API Reference](./docs/api.md)
+- [CLI Usage](./docs/cli.md)
+- [Development Guide](./docs/development.md)
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+
+## 📄 License
+
+This project is licensed under the Apache 2.0 License - see the [LICENSE](LICENSE) file for details.
+
+## 📞 Support
+
+For support, please open an issue in the [issue tracker](https://github.com/fin-officer/invocr/issues).
+
+## 📊 Project Status
+
+![GitHub last commit](https://img.shields.io/github/last-commit/fin-officer/invocr)
+![GitHub issues](https://img.shields.io/github/issues/fin-officer/invocr)
+![GitHub pull requests](https://img.shields.io/github/issues-pr/fin-officer/invocr)
+
+---
+
+<div align="center">
+  Made with ❤️ by the InvOCR Team
+</div>
 poetry install
 
 # Setup environment

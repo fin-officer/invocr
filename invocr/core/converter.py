@@ -8,15 +8,15 @@ import tempfile
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
-from ..formats.pdf import PDFProcessor
+from ..core.extractor import DataExtractor
+from ..core.ocr import create_ocr_engine
+from ..formats.html_handler import HTMLHandler
 from ..formats.image import ImageProcessor
 from ..formats.json_handler import JSONHandler
+from ..formats.pdf import PDFProcessor
 from ..formats.xml_handler import XMLHandler
-from ..formats.html_handler import HTMLHandler
-from ..core.ocr import create_ocr_engine
-from ..core.extractor import DataExtractor
-from ..utils.logger import get_logger
 from ..utils.config import get_settings
+from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
 settings = get_settings()
@@ -26,7 +26,7 @@ class UniversalConverter:
     """Universal converter supporting all format combinations"""
 
     def __init__(self, languages: List[str] = None):
-        self.languages = languages or ['en', 'pl', 'de', 'fr', 'es']
+        self.languages = languages or ["en", "pl", "de", "fr", "es"]
         self.ocr_engine = create_ocr_engine(self.languages)
         self.extractor = DataExtractor(self.languages)
 
@@ -39,10 +39,13 @@ class UniversalConverter:
 
         logger.info("Universal converter initialized")
 
-    def convert(self, input_path: Union[str, Path],
-                output_path: Union[str, Path],
-                source_format: str = "auto",
-                target_format: str = "json") -> Dict[str, any]:
+    def convert(
+        self,
+        input_path: Union[str, Path],
+        output_path: Union[str, Path],
+        source_format: str = "auto",
+        target_format: str = "json",
+    ) -> Dict[str, any]:
         """
         Convert between any supported formats
 
@@ -74,7 +77,7 @@ class UniversalConverter:
                 "target_format": target_format,
                 "input_path": str(input_path),
                 "output_path": str(output_path),
-                "metadata": result
+                "metadata": result,
             }
 
         except Exception as e:
@@ -83,18 +86,22 @@ class UniversalConverter:
                 "success": False,
                 "error": str(e),
                 "source_format": source_format,
-                "target_format": target_format
+                "target_format": target_format,
             }
 
-    def pdf_to_images(self, pdf_path: Union[str, Path],
-                      output_dir: Union[str, Path],
-                      format: str = "png",
-                      dpi: int = 300) -> List[str]:
+    def pdf_to_images(
+        self,
+        pdf_path: Union[str, Path],
+        output_dir: Union[str, Path],
+        format: str = "png",
+        dpi: int = 300,
+    ) -> List[str]:
         """Convert PDF to images (PDF → PNG/JPG)"""
         return self.pdf_processor.to_images(pdf_path, output_dir, format, dpi)
 
-    def image_to_json(self, image_path: Union[str, Path],
-                      document_type: str = "invoice") -> Dict[str, any]:
+    def image_to_json(
+        self, image_path: Union[str, Path], document_type: str = "invoice"
+    ) -> Dict[str, any]:
         """Convert image to JSON using OCR (IMG → JSON)"""
         # Extract text using OCR
         ocr_result = self.ocr_engine.extract_text(image_path)
@@ -110,14 +117,17 @@ class UniversalConverter:
             "ocr_confidence": ocr_result["confidence"],
             "ocr_engine": ocr_result.get("engine_used", "auto"),
             "languages": self.languages,
-            "document_type": document_type
+            "document_type": document_type,
         }
 
         return structured_data
 
-    def pdf_to_json(self, pdf_path: Union[str, Path],
-                    document_type: str = "invoice",
-                    use_ocr: bool = True) -> Dict[str, any]:
+    def pdf_to_json(
+        self,
+        pdf_path: Union[str, Path],
+        document_type: str = "invoice",
+        use_ocr: bool = True,
+    ) -> Dict[str, any]:
         """Convert PDF to JSON (PDF → JSON)"""
         # Try direct text extraction first
         try:
@@ -131,7 +141,7 @@ class UniversalConverter:
                 structured_data["_metadata"] = {
                     "source_type": "pdf_text",
                     "extraction_method": "direct",
-                    "document_type": document_type
+                    "document_type": document_type,
                 }
             else:
                 raise ValueError("Insufficient text extracted")
@@ -167,38 +177,43 @@ class UniversalConverter:
                         "extraction_method": "ocr",
                         "ocr_confidence": avg_confidence,
                         "pages_processed": len(images[:3]),
-                        "document_type": document_type
+                        "document_type": document_type,
                     }
                 else:
                     raise ValueError("No images extracted from PDF")
 
         return structured_data
 
-    def json_to_xml(self, json_data: Union[Dict, str, Path],
-                    xml_format: str = "eu_invoice") -> str:
+    def json_to_xml(
+        self, json_data: Union[Dict, str, Path], xml_format: str = "eu_invoice"
+    ) -> str:
         """Convert JSON to XML (JSON → XML)"""
         if isinstance(json_data, (str, Path)):
-            with open(json_data, 'r', encoding='utf-8') as f:
+            with open(json_data, "r", encoding="utf-8") as f:
                 data = json.load(f)
         else:
             data = json_data
 
         return self.xml_handler.to_xml(data, xml_format)
 
-    def json_to_html(self, json_data: Union[Dict, str, Path],
-                     template: str = "modern") -> str:
+    def json_to_html(
+        self, json_data: Union[Dict, str, Path], template: str = "modern"
+    ) -> str:
         """Convert JSON to HTML (JSON → HTML)"""
         if isinstance(json_data, (str, Path)):
-            with open(json_data, 'r', encoding='utf-8') as f:
+            with open(json_data, "r", encoding="utf-8") as f:
                 data = json.load(f)
         else:
             data = json_data
 
         return self.html_handler.to_html(data, template)
 
-    def html_to_pdf(self, html_input: Union[str, Path],
-                    output_path: Union[str, Path],
-                    options: Dict = None) -> str:
+    def html_to_pdf(
+        self,
+        html_input: Union[str, Path],
+        output_path: Union[str, Path],
+        options: Dict = None,
+    ) -> str:
         """Convert HTML to PDF (HTML → PDF)"""
         return self.html_handler.to_pdf(html_input, output_path, options)
 
@@ -208,19 +223,19 @@ class UniversalConverter:
         extension = path.suffix.lower()
 
         format_map = {
-            '.pdf': 'pdf',
-            '.png': 'image',
-            '.jpg': 'image',
-            '.jpeg': 'image',
-            '.tiff': 'image',
-            '.bmp': 'image',
-            '.json': 'json',
-            '.xml': 'xml',
-            '.html': 'html',
-            '.htm': 'html'
+            ".pdf": "pdf",
+            ".png": "image",
+            ".jpg": "image",
+            ".jpeg": "image",
+            ".tiff": "image",
+            ".bmp": "image",
+            ".json": "json",
+            ".xml": "xml",
+            ".html": "html",
+            ".htm": "html",
         }
 
-        detected = format_map.get(extension, 'unknown')
+        detected = format_map.get(extension, "unknown")
         logger.info(f"Detected format: {detected} for {file_path}")
         return detected
 
@@ -231,7 +246,7 @@ class UniversalConverter:
         elif format == "image":
             return self.image_to_json(file_path)
         elif format == "json":
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 return json.load(f)
         elif format == "xml":
             return self.xml_handler.from_xml(file_path)
@@ -240,34 +255,36 @@ class UniversalConverter:
         else:
             raise ValueError(f"Unsupported source format: {format}")
 
-    def _save_data(self, data: Dict, file_path: Union[str, Path],
-                   format: str) -> Dict[str, any]:
+    def _save_data(
+        self, data: Dict, file_path: Union[str, Path], format: str
+    ) -> Dict[str, any]:
         """Save data to file in specified format"""
         path = Path(file_path)
         path.parent.mkdir(parents=True, exist_ok=True)
 
         if format == "json":
-            with open(path, 'w', encoding='utf-8') as f:
+            with open(path, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
             return {"size": path.stat().st_size}
 
         elif format == "xml":
             xml_content = self.json_to_xml(data)
-            with open(path, 'w', encoding='utf-8') as f:
+            with open(path, "w", encoding="utf-8") as f:
                 f.write(xml_content)
             return {"size": path.stat().st_size, "format": "eu_invoice"}
 
         elif format == "html":
             html_content = self.json_to_html(data)
-            with open(path, 'w', encoding='utf-8') as f:
+            with open(path, "w", encoding="utf-8") as f:
                 f.write(html_content)
             return {"size": path.stat().st_size, "template": "modern"}
 
         elif format == "pdf":
             # First convert to HTML, then to PDF
             html_content = self.json_to_html(data)
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.html',
-                                             delete=False, encoding='utf-8') as tmp:
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".html", delete=False, encoding="utf-8"
+            ) as tmp:
                 tmp.write(html_content)
                 tmp.flush()
                 self.html_to_pdf(tmp.name, path)
@@ -283,11 +300,14 @@ class BatchConverter:
     def __init__(self, languages: List[str] = None):
         self.converter = UniversalConverter(languages)
 
-    def convert_directory(self, input_dir: Union[str, Path],
-                          output_dir: Union[str, Path],
-                          source_format: str = "auto",
-                          target_format: str = "json",
-                          pattern: str = "*") -> List[Dict]:
+    def convert_directory(
+        self,
+        input_dir: Union[str, Path],
+        output_dir: Union[str, Path],
+        source_format: str = "auto",
+        target_format: str = "json",
+        pattern: str = "*",
+    ) -> List[Dict]:
         """Convert all files in directory"""
         input_path = Path(input_dir)
         output_path = Path(output_dir)
@@ -318,18 +338,23 @@ class BatchConverter:
 
                 except Exception as e:
                     logger.error(f"❌ {file_path.name}: {e}")
-                    results.append({
-                        "success": False,
-                        "error": str(e),
-                        "source_file": str(file_path)
-                    })
+                    results.append(
+                        {
+                            "success": False,
+                            "error": str(e),
+                            "source_file": str(file_path),
+                        }
+                    )
 
         return results
 
-    def convert_parallel(self, file_list: List[Union[str, Path]],
-                         output_dir: Union[str, Path],
-                         target_format: str = "json",
-                         max_workers: int = 4) -> List[Dict]:
+    def convert_parallel(
+        self,
+        file_list: List[Union[str, Path]],
+        output_dir: Union[str, Path],
+        target_format: str = "json",
+        max_workers: int = 4,
+    ) -> List[Dict]:
         """Convert files in parallel using thread pool"""
         from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -342,7 +367,9 @@ class BatchConverter:
             try:
                 input_path = Path(file_path)
                 output_file = output_path / f"{input_path.stem}.{target_format}"
-                return self.converter.convert(file_path, output_file, "auto", target_format)
+                return self.converter.convert(
+                    file_path, output_file, "auto", target_format
+                )
             except Exception as e:
                 return {"success": False, "error": str(e), "file": str(file_path)}
 
@@ -360,11 +387,13 @@ class BatchConverter:
                     results.append(result)
                 except Exception as e:
                     logger.error(f"Thread execution failed for {file_path}: {e}")
-                    results.append({
-                        "success": False,
-                        "error": str(e),
-                        "source_file": str(file_path)
-                    })
+                    results.append(
+                        {
+                            "success": False,
+                            "error": str(e),
+                            "source_file": str(file_path),
+                        }
+                    )
 
         return results
 
