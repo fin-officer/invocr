@@ -5,49 +5,595 @@ Simplified version focusing on invoice data extraction
 
 import re
 from datetime import datetime
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
 
 class DataExtractor:
-    """Data extractor for invoice documents"""
+    """
+    Data extractor for invoice documents.
+    Supports multiple languages and various invoice formats.
+    """
 
     def __init__(self, languages: List[str] = None):
+        """
+        Initialize the DataExtractor with specified languages.
+        
+        Args:
+            languages: List of language codes to support (default: ["en", "pl"])
+        """
         self.languages = languages or ["en", "pl"]
         self.patterns = self._load_extraction_patterns()
         logger.info(f"Data extractor initialized for languages: {self.languages}")
 
     def extract_invoice_data(self, text: str, document_type: str = "invoice") -> Dict[str, Any]:
         """
-        Extract structured data from invoice text
+        Extract structured data from invoice text.
 
         Args:
             text: Raw text from OCR
-            document_type: Type of document (currently only "invoice" is supported)
+            document_type: Type of document (e.g., "invoice", "receipt")
 
         Returns:
-            Structured data dictionary
+            Dict containing structured invoice data
         """
         # Initialize data structure
         data = self._get_document_template(document_type)
         
+        # Detect document language
+        detected_lang = self._detect_language(text)
+        
         # Extract basic information
-        data.update(self._extract_basic_info(text, "en"))  # Default to English
+        data.update(self._extract_basic_info(text, detected_lang))
         
         # Extract parties (seller/buyer)
-        data.update(self._extract_parties(text, "en"))
+        data.update(self._extract_parties(text, detected_lang))
         
         # Extract items and totals
-        data["items"] = self._extract_items(text)
-        data["totals"] = self._extract_totals(text)
+        data["items"] = self._extract_items(text, detected_lang)
+        data["totals"] = self._extract_totals(text, detected_lang)
+        
+        # Extract payment information
+        payment_info = self._extract_payment_info(text, detected_lang)
+        data.update(payment_info)
         
         # Add metadata
         data["_metadata"] = {
             "extraction_timestamp": datetime.utcnow().isoformat(),
             "document_type": document_type,
+            "language": detected_lang,
             "confidence": self._calculate_confidence(data, text)
+        }
+        
+        # Clean and validate the extracted data
+        data = self._clean_and_validate_data(data)
+        
+        return data
+        
+    def _get_document_template(self, doc_type: str) -> Dict[str, Any]:
+        """
+        Get base template for different document types.
+        
+        Args:
+            doc_type: Type of document (e.g., "invoice", "receipt", "payment")
+            
+        Returns:
+            Dictionary with the document template structure
+        """
+        templates = {
+            "invoice": {
+                "document_type": "invoice",
+                "document_number": "",
+                "issue_date": "",
+                "due_date": "",
+                "seller": {
+                    "name": "",
+                    "address": "",
+                    "tax_id": "",
+                    "email": "",
+                    "phone": ""
+                },
+                "buyer": {
+                    "name": "",
+                    "address": "",
+                    "tax_id": ""
+                },
+                "items": [],
+                "totals": {
+                    "subtotal": 0.0,
+                    "tax_amount": 0.0,
+                    "total": 0.0,
+                    "currency": ""
+                },
+                "payment_terms": "",
+                "payment_method": "",
+                "bank_account": "",
+                "notes": ""
+            },
+            "receipt": {
+                "document_type": "receipt",
+                "document_number": "",
+                "date": "",
+                "seller": {
+                    "name": "",
+                    "tax_id": ""
+                },
+                "items": [],
+                "totals": {
+                    "subtotal": 0.0,
+                    "tax_amount": 0.0,
+                    "total": 0.0,
+                    "currency": "",
+                    "payment_method": ""
+                }
+            },
+            "payment": {
+                "document_type": "payment",
+                "document_number": "",
+                "date": "",
+                "amount": 0.0,
+                "currency": "",
+                "payer": {
+                    "name": "",
+                    "account": ""
+                },
+                "recipient": {
+                    "name": "",
+                    "account": ""
+                },
+                "reference": "",
+                "payment_method": "",
+                "notes": ""
+            }
+        }
+        
+        return templates.get(doc_type, {"document_type": doc_type})
+        
+    def _detect_language(self, text: str) -> str:
+        """
+        Detect the language of the document text.
+        
+        Args:
+            text: Document text to analyze
+            
+        Returns:
+            Detected language code (e.g., 'en', 'pl')
+        """
+        # Simple implementation - can be enhanced with more sophisticated detection
+        if any(word in text.lower() for word in ["faktura", "nip", "sprzedawca"]):
+            return "pl"
+        return "en"
+        
+    def _load_extraction_patterns(self) -> Dict[str, Any]:
+        """
+        Load extraction patterns for different languages and fields.
+        
+        Returns:
+            Dictionary of patterns organized by language and field
+        """
+        return {
+            "en": {
+                "document_number": [
+                    r"(?:invoice|bill|receipt)[^\n\d]*([A-Z0-9-]+)",
+                    r"(?:no\.?|nr|#)\s*([A-Z0-9-]+)"
+                ],
+                "dates": {
+                    "issue_date": [
+                        r"(?:date|issue date|invoice date)[^\n:]*[:\s]+([0-9]{1,2}[/\-\.][0-9]{1,2}[/\-\.][0-9]{2,4})",
+                        r"(\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{2,4})\s*(?=invoice|date|issue)"
+                    ],
+                    "due_date": [
+                        r"(?:due date|payment due|pay by)[^\n:]*[:\s]+([0-9]{1,2}[/\-\.][0-9]{1,2}[/\-\.][0-9]{2,4})",
+                        r"(\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{2,4})\s*(?=due|payment|pay by)"
+                    ]
+                },
+                "parties": {
+                    "seller": [
+                        r"(?:from|seller|provider|supplier)[^\n:]*[:\s]+([^\n]+)",
+                        r"(?:sprzedawca|wystawca)[^\n:]*[:\s]+([^\n]+)"
+                    ],
+                    "buyer": [
+                        r"(?:to|buyer|customer|recipient)[^\n:]*[:\s]+([^\n]+)",
+                        r"(?:nabywca|odbiorca)[^\n:]*[:\s]+([^\n]+)"
+                    ]
+                },
+                "items": {
+                    "line_item": [
+                        r"(\d+)\s+(.+?)\s+(\d+[\.]?\d*)\s+([0-9\s,]+[\.]\d{2})\s+([0-9\s,]+[\.]\d{2})",
+                        r"(.+?)\s+(\d+[\.]?\d*)\s+([0-9\s,]+[\.]\d{2})\s+([0-9\s,]+[\.]\d{2})"
+                    ]
+                },
+                "totals": {
+                    "subtotal": [
+                        r"subtotal[^\d]*([0-9\s,]+[\.]\d{2})",
+                        r"net[^\d]*([0-9\s,]+[\.]\d{2})"
+                    ],
+                    "tax_amount": [
+                        r"(?:vat|tax)[^\d]*([0-9\s,]+[\.]\d{2})",
+                        r"tax[^\d]*([0-9\s,]+[\.]\d{2})"
+                    ],
+                    "total": [
+                        r"(?:total|amount due|total due|to pay)[^\d]*([0-9\s,]+[\.]\d{2})",
+                        r"(?:total|amount)[^\d]*([0-9\s,]+[\.]\d{2})"
+                    ],
+                    "currency": [
+                        r"([$€£]|USD|EUR|GBP|PLN|JPY|CHF)",
+                        r"(?:currency|curr\.?)[^\n:]*[:\s]*([A-Z]{3})"
+                    ]
+                },
+                "payment_terms": [
+                    r"(?:payment terms|terms)[^\n:]*[:\s]+([^\n]+)",
+                    r"(?:terms of payment)[^\n:]*[:\s]+([^\n]+)"
+                ],
+                "payment": {
+                    "bank_account": [
+                        r"(?:bank account|account number|acc\.? no\.?)[^\n:]*[:\s]+([A-Z0-9 ]+)",
+                        r"(?:IBAN|account)[^\n:]*[:\s]+([A-Z0-9 ]+)"
+                    ],
+                    "payment_method": [
+                        r"(?:payment method|paid by|via)[^\n:]*[:\s]+([^\n]+)",
+                        r"(?:paid via|payment via)[^\n:]*[:\s]+([^\n]+)"
+                    ]
+                }
+            },
+            "pl": {
+                "document_number": [
+                    r"(?:faktura|rachunek|fv)[^\n\d]*(FV[\s\-]?[A-Z0-9\-]+)",
+                    r"(?:nr|numer)[^\n:]*[:\s]+([A-Z0-9\-]+)"
+                ],
+                "dates": {
+                    "issue_date": [
+                        r"data wystawienia[^\n:]*[:\s]+([0-9]{1,2}[/\-\.][0-9]{1,2}[/\-\.][0-9]{2,4})",
+                        r"(\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{2,4})\s*(?=data wystawienia)"
+                    ],
+                    "sale_date": [
+                        r"data sprzedaży[^\n:]*[:\s]+([0-9]{1,2}[/\-\.][0-9]{1,2}[/\-\.][0-9]{2,4})",
+                        r"(\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{2,4})\s*(?=data sprzedaży)"
+                    ],
+                    "due_date": [
+                        r"termin płatności[^\n:]*[:\s]+([0-9]{1,2}[/\-\.][0-9]{1,2}[/\-\.][0-9]{2,4})",
+                        r"(\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{2,4})\s*(?=termin płatności)"
+                    ]
+                },
+                "parties": {
+                    "seller": [
+                        r"sprzedawca[^\n:]*[:\s]+([^\n]+)",
+                        r"sprzedawca[\s\S]+?nazwa[^\n:]*[:\s]+([^\n]+)"
+                    ],
+                    "buyer": [
+                        r"nabywca[^\n:]*[:\s]+([^\n]+)",
+                        r"nabywca[\s\S]+?nazwa[^\n:]*[:\s]+([^\n]+)"
+                    ]
+                },
+                "items": {
+                    "line_item": [
+                        r"(\d+)\s+(.+?)\s+(\d+[\.,]?\d*)\s+[A-Za-z]*\s*([0-9\s,]+[\.,]\d{2})\s+[A-Za-z]*\s*([0-9\s,]+[\.,]\d{2})",
+                        r"(.+?)\s+(\d+[\.,]?\d*)\s+[A-Za-z]*\s*([0-9\s,]+[\.,]\d{2})\s+[A-Za-z]*\s*([0-9\s,]+[\.,]\d{2})"
+                    ]
+                },
+                "totals": {
+                    "subtotal": [
+                        r"wartość netto[^\d]*([0-9\s,]+[\.,]\d{2})",
+                        r"netto[^\d]*([0-9\s,]+[\.,]\d{2})"
+                    ],
+                    "tax_amount": [
+                        r"kwota vat[^\d]*([0-9\s,]+[\.,]\d{2})",
+                        r"podatek[^\d]*([0-9\s,]+[\.,]\d{2})",
+                        r"vat[^\d]*([0-9\s,]+[\.,]\d{2})"
+                    ],
+                    "total": [
+                        r"wartość brutto[^\d]*([0-9\s,]+[\.,]\d{2})",
+                        r"razem brutto[^\d]*([0-9\s,]+[\.,]\d{2})",
+                        r"do zapłaty[^\d]*([0-9\s,]+[\.,]\d{2})",
+                        r"razem[^\d]*([0-9\s,]+[\.,]\d{2})"
+                    ],
+                    "currency": [
+                        r"([$€£]|PLN|EUR|USD|GBP|CHF)",
+                        r"(?:waluta|curr\.?)[^\n:]*[:\s]*([A-Z]{3})"
+                    ]
+                },
+                "payment_terms": [
+                    r"forma płatności[^\n:]*[:\s]+([^\n]+)",
+                    r"termin płatności[^\n:]*[:\s]+([^\n]+)",
+                    r"płatność[^\n:]*[:\s]+([^\n]+)"
+                ],
+                "payment": {
+                    "bank_account": [
+                        r"numer konta[^\n:]*[:\s]+([A-Z0-9 ]+)",
+                        r"nr rachunku[^\n:]*[:\s]+([A-Z0-9 ]+)",
+                        r"IBAN[^\n:]*[:\s]+([A-Z0-9 ]+)"
+                    ],
+                    "payment_method": [
+                        r"forma płatności[^\n:]*[:\s]+([^\n]+)",
+                        r"zapłacono[^\n:]*[:\s]+([^\n]+)",
+                        r"(przelewem|gotówką|kartą|przelew|przelewem bankowym)"
+                    ]
+                }
+            },
+            "de": {
+                # Placeholder for German patterns - to be implemented
+                "document_number": [
+                    r"(?:rechnung|rnr\.?|rechnungsnummer)[^\n:]*[:\s]*([A-Z0-9\-]+)",
+                    r"(?:rechnung|rnr\.?|nr\.?)[^\n\d]*(\d+)"
+                ],
+                "dates": {
+                    "issue_date": [
+                        r"rechnungsdatum[^\n:]*[:\s]+(\d{1,2}[\./]\d{1,2}[\./]\d{2,4})",
+                        r"datum[^\n:]*[:\s]+(\d{1,2}[\./]\d{1,2}[\./]\d{2,4})",
+                        r"(\d{1,2}[\./]\d{1,2}[\./]\d{2,4})\s*(?=rechnung|datum|rnr)"
+                    ],
+                    "due_date": [
+                        r"fällig(?:keit)?[^\n:]*[:\s]+(\d{1,2}[\./]\d{1,2}[\./]\d{2,4})",
+                        r"zahlbar bis[^\n:]*[:\s]+(\d{1,2}[\./]\d{1,2}[\./]\d{2,4})",
+                        r"(\d{1,2}[\./]\d{1,2}[\./]\d{2,4})\s*(?=fällig|zahlbar)"
+                    ]
+                },
+                "totals": {
+                    "subtotal": [
+                        r"netto[^\d]*([0-9\s,]+[\.,]\d{2})",
+                        r"zwischensumme[^\d]*([0-9\s,]+[\.,]\d{2})"
+                    ],
+                    "tax_amount": [
+                        r"mwst[^\d]*([0-9\s,]+[\.,]\d{2})",
+                        r"ust[^\d]*([0-9\s,]+[\.,]\d{2})",
+                        r"mehrwertsteuer[^\d]*([0-9\s,]+[\.,]\d{2})"
+                    ],
+                    "total": [
+                        r"gesamt[^\d]*([0-9\s,]+[\.,]\d{2})",
+                        r"endbetrag[^\d]*([0-9\s,]+[\.,]\d{2})",
+                        r"rechnungsbetrag[^\d]*([0-9\s,]+[\.,]\d{2})"
+                    ],
+                    "currency": [
+                        r"([$€£]|EUR|CHF|USD|GBP)",
+                        r"(?:währung|waehrung|waehr\.?)[^\n:]*[:\s]*([A-Z]{3})"
+                    ]
+                }
+            }
+        }
+    
+    def _parse_date(self, date_str: str) -> str:
+        """
+        Parse date string into ISO format (YYYY-MM-DD).
+        
+        Args:
+            date_str: Date string in various formats
+            
+        Returns:
+            Date string in ISO format (YYYY-MM-DD)
+        """
+        try:
+            # Clean up the date string
+            date_str = date_str.strip()
+            
+            # Try different date formats
+            for fmt in ["%d.%m.%Y", "%d/%m/%Y", "%d-%m-%Y", 
+                       "%Y-%m-%d", "%Y/%m/%d", "%Y.%m.%d"]:
+                try:
+                    dt = datetime.strptime(date_str, fmt)
+                    return dt.strftime("%Y-%m-%d")
+                except ValueError:
+                    continue
+            
+            # If no format matched, return the original string
+            return date_str
+            
+        except Exception as e:
+            logger.warning(f"Failed to parse date '{date_str}': {str(e)}")
+            return date_str
+    
+    def _extract_basic_info(self, text: str, language: str) -> Dict[str, str]:
+        """
+        Extract basic document information.
+        
+        Args:
+            text: Document text
+            language: Language code (e.g., 'en', 'pl')
+            
+        Returns:
+            Dictionary with basic document information
+        """
+        info = {}
+        
+        # Extract document number
+        doc_number_patterns = self.patterns.get(language, {}).get("document_number", [])
+        for pattern in doc_number_patterns:
+            match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
+            if match:
+                info["document_number"] = match.group(1).strip()
+                break
+                
+        # Extract dates
+        date_patterns = self.patterns.get(language, {}).get("dates", {})
+        for date_field, patterns in date_patterns.items():
+            for pattern in patterns:
+                match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
+                if match:
+                    info[date_field] = self._parse_date(match.group(1))
+                    break
+                    
+        return info
+        
+    def _extract_parties(self, text: str, language: str) -> Dict[str, Dict]:
+        """Extract seller and buyer information"""
+        result = {"seller": {}, "buyer": {}}
+        party_patterns = self.patterns.get(language, {}).get("parties", {})
+        
+        for party_type in ["seller", "buyer"]:
+            patterns = party_patterns.get(party_type, [])
+            for pattern in patterns:
+                match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
+                if match:
+                    result[party_type]["name"] = match.group(1).strip()
+                    break
+                    
+        return result
+        
+    def _extract_items(self, text: str) -> List[Dict]:
+        """Extract line items from text"""
+        items = []
+        patterns = self.patterns.get("en", {}).get("items", {}).get("line_item", [])
+        
+        for pattern in patterns:
+            for match in re.finditer(pattern, text, re.MULTILINE):
+                try:
+                    item = {
+                        "description": match.group(1).strip(),
+                        "quantity": float(match.group(2).replace(",", ".")),
+                        "unit_price": float(match.group(3).replace(",", "").replace(" ", "")),
+                        "total": float(match.group(4).replace(",", "").replace(" ", ""))
+                    }
+                    items.append(item)
+                except (IndexError, ValueError):
+                    continue
+                    
+        return items
+        
+    def _extract_totals(self, text: str) -> Dict[str, float]:
+        """Extract financial totals"""
+        totals = {"subtotal": 0.0, "tax_amount": 0.0, "total": 0.0, "currency": ""}
+        patterns = self.patterns.get("en", {}).get("totals", {})
+        
+        for field, field_patterns in patterns.items():
+            for pattern in field_patterns:
+                match = re.search(pattern, text, re.IGNORECASE)
+                if match:
+                    try:
+                        # Extract the amount value
+                        amount_str = match.group(1).replace(" ", "").replace(",", ".")
+                        totals[field] = float(amount_str)
+                    except (IndexError, ValueError, AttributeError):
+                        continue
+                    break
+                        
+        return totals
+        
+    def _calculate_confidence(self, data: Dict, text: str) -> float:
+        """Calculate confidence score for the extracted data"""
+        score = 0
+        max_score = 5  # Total possible score
+        
+        if data.get("document_number"):
+            score += 1
+        if data.get("issue_date"):
+            score += 1
+        if data.get("totals", {}).get("total", 0) > 0:
+            score += 1
+        if data.get("seller", {}).get("name"):
+            score += 1
+        if data.get("buyer", {}).get("name"):
+            score += 1
+            
+        return min(score / max_score, 1.0)
+        
+    def _parse_date(self, date_str: str) -> str:
+        """Parse date string into ISO format"""
+        try:
+            # Try common date formats
+            for fmt in ["%d.%m.%Y", "%d-%m-%Y", "%d/%m/%Y", "%Y-%m-%d"]:
+                try:
+                    dt = datetime.strptime(date_str, fmt)
+                    return dt.strftime("%Y-%m-%d")
+                except ValueError:
+                    continue
+            return date_str.strip()
+        except (ValueError, AttributeError):
+            return date_str.strip()
+
+    def _load_extraction_patterns(self) -> Dict[str, Dict]:
+        """Load and return extraction patterns for different document fields"""
+        return {
+            "en": {
+                "document_number": [
+                    r"(?:Invoice|INVOICE|Bill|BILL)[\s:]*[#]?[\s]*(\S+)",
+                    r"(?:No\.?|Number|Nr\.?|#)[\s:]*([A-Z0-9\-\/]+)",
+                    r"F[0-9]{4,}-[0-9]+"
+                ],
+                "dates": {
+                    "issue_date": [
+                        r"(?:Date|Invoice Date|Issued|Date of Issue)[\s:]+(\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{2,4})",
+                        r"(\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{2,4})\s*(?=Invoice|Date|$)"
+                    ],
+                    "due_date": [
+                        r"(?:Due Date|Due|Payment Due|Due On)[\s:]+(\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{2,4})",
+                        r"(?:Payment Terms|Terms)[\s:]+(?:Net|NET)\s*(\d+)\s*(?:days|Days|day|Day)"
+                    ]
+                },
+                "parties": {
+                    "seller": [
+                        r"(?:From|Seller|Vendor|Provider)[\s:]+(.+?)(?=\s*(?:To|Buyer|Client|Customer|$))",
+                        r"(?:Bill From|Issuer)[\s:]+(.+?)(?=\s*(?:Bill To|Recipient|$))"
+                    ],
+                    "buyer": [
+                        r"(?:To|Bill To|Buyer|Client|Customer)[\s:]+(.+?)(?=\s*(?:From|Seller|Vendor|$))",
+                        r"(?:Ship To|Recipient)[\s:]+(.+?)(?=\s*(?:From|Issuer|$))"
+                    ]
+                },
+                "items": {
+                    "line_item": [
+                        r"(\d+)\s+(.+?)\s+([$€£]?\s*[0-9,]+\s*[\\.\,]?\d{0,2})\s+([$€£]?\s*[0-9,]+\s*[\\.\,]?\d{0,2})",
+                        r"(.+?)\s+([$€£]?\s*[0-9,]+\s*[\\.\,]?\d{0,2})\s+([$€£]?\s*[0-9,]+\s*[\\.\,]?\d{0,2})"
+                    ]
+                },
+                "totals": {
+                    "total": [
+                        r"(?:Total|TOTAL|Amount Due|Total Amount)[\s:]*[A-Z]*\s*([$€£]?\s*[0-9,]+\s*[\\.\,]?\d{0,2})\s*(?:USD|EUR|GBP|PLN)?"
+                    ],
+                    "subtotal": [
+                        r"(?:Subtotal|Sub-total)[\s:]*[A-Z]*\s*([$€£]?\s*[0-9,]+\s*[\\.\,]?\d{0,2})",
+                        r"(?:Net|Net Amount)[\s:]*[A-Z]*\s*([$€£]?\s*[0-9,]+\s*[\\.\,]?\d{0,2})"
+                    ],
+                    "tax_amount": [
+                        r"(?:Tax|VAT|TAX)[\s:]*[A-Z]*\s*([$€£]?\s*[0-9,]+\s*[\\.\,]?\d{0,2})",
+                        r"(?:VAT|TAX)[\s(]+\d+%[\s)]*[A-Z]*\s*([$€£]?\s*[0-9,]+\s*[\\.\,]?\d{0,2})"
+                    ]
+                }
+            },
+            "pl": {
+                "document_number": [
+                    r"(?:Faktura|FV|F)[\s:]*[\s]*(\S+)",
+                    r"(?:Nr\.?|Numer)[\s:]*([A-Z0-9\-\/]+)",
+                    r"FV[\s]*(\d+/\d+)"
+                ],
+                "dates": {
+                    "issue_date": [
+                        r"(?:Data wystawienia|Data sprzedaży|Data)[\s:]+(\d{1,2}[\-\.]\d{1,2}[\-\.]\d{2,4})",
+                        r"(\d{1,2}[\-\.]\d{1,2}[\-\.]\d{2,4})\s*(?=Faktura|Data|$)"
+                    ],
+                    "due_date": [
+                        r"(?:Termin płatności|Do zapłaty do|Termin)[\s:]+(\d{1,2}[\-\.]\d{1,2}[\-\.]\d{2,4})",
+                        r"(?:Termin płatności|Do zapłaty)[\s:]+(\d+)\s*dn[i]?"
+                    ]
+                },
+                "parties": {
+                    "seller": [
+                        r"(?:Sprzedawca|Wystawca|Fakturujący)[\s:]+(.+?)(?=\s*(?:Nabywca|Kupujący|$))"
+                    ],
+                    "buyer": [
+                        r"(?:Nabywca|Kupujący)[\s:]+(.+?)(?=\s*(?:Sprzedawca|Wystawca|$))"
+                    ]
+                },
+                "items": {
+                    "line_item": [
+                        r"(\d+)\s+(.+?)\s+(\d+[,\.]?\d*)\s+([0-9\s,]+[,\.]\d{2})\s+([0-9\s,]+[,\.]\d{2})",
+                        r"(.+?)\s+(\d+[,\.]?\d*)\s+([0-9\s,]+[,\.]\d{2})\s+([0-9\s,]+[,\.]\d{2})"
+                    ]
+                },
+                "totals": {
+                    "total": [
+                        r"(?:Razem|Do zapłaty|Suma)[\s:]*[\s]*([0-9\s,]+[,\.]\d{2})\s*(?:zł|PLN)?"
+                    ],
+                    "subtotal": [
+                        r"(?:Wartość netto|Netto|Suma netto)[\s:]*[\s]*([0-9\s,]+[,\.]\d{2})",
+                        r"(?:Razem netto|Netto)[\s:]*[\s]*([0-9\s,]+[,\.]\d{2})"
+                    ],
+                    "tax_amount": [
+                        r"(?:VAT|Podatek VAT|Kwota VAT)[\s:]*[\s]*([0-9\s,]+[,\.]\d{2})",
+                        r"(?:VAT|Podatek)[\s:]+\d+%[\s:]*[\s]*([0-9\s,]+[,\.]\d{2})"
+                    ]
+                }
+            }
         }
         
         return data
@@ -454,30 +1000,53 @@ class DataExtractor:
                         value[subkey] = subvalue.strip()
 
     def _calculate_confidence(self, data: Dict, text: str) -> float:
-        """Calculate extraction confidence score"""
+        """
+        Calculate confidence score for the extracted data.
+        
+        Args:
+            data: Extracted data dictionary
+            text: Original text used for extraction
+            
+        Returns:
+            Confidence score between 0.0 and 1.0
+        """
         score = 0
-        max_score = 10
-
-        # Check for key fields
+        max_score = 10  # Total possible score
+        
+        # Basic document info
         if data.get("document_number"):
             score += 2
-        if data.get("document_date"):
+        if data.get("issue_date"):
             score += 1
-        if data.get("seller", {}).get("name"):
+            
+        # Seller information
+        seller = data.get("seller", {})
+        if seller.get("name"):
             score += 1
+        if seller.get("tax_id") or seller.get("address"):
+            score += 1
+            
+        # Buyer information
+        buyer = data.get("buyer", {})
+        if buyer.get("name"):
+            score += 1
+        if buyer.get("tax_id") or buyer.get("address"):
+            score += 1
+            
+        # Items and totals
         if data.get("items") and len(data["items"]) > 0:
             score += 2
         if data.get("totals", {}).get("total", 0) > 0:
             score += 2
-        if data.get("seller", {}).get("tax_id"):
+            
+        # Payment information
+        if data.get("payment_method") or data.get("bank_account"):
             score += 1
-        if data.get("payment_method"):
+            
+        # Calculate final score (normalized to 0.0-1.0)
+        return min(score / max_score, 1.0)
+
     def _load_extraction_patterns(self) -> Dict[str, Dict]:
-    """Load and return extraction patterns for different document fields"""
-    return {
-        "pl": {
-            "totals": {
-                "total": [
                     r"(?:Razem|Do zapłaty|Suma)\s*:?\s*([0-9\s,]+[,\.]\d{2})\s*(?:zł|PLN)?"
                 ],
                 "subtotal": [r"(?:Netto|Suma netto)\s*:?\s*([0-9\s,]+[,\.]\d{2})"],
@@ -485,13 +1054,10 @@ class DataExtractor:
             },
             "items": {
                 "line_item": [
-                    r"(.+?)\s+(\d+(?:[,\.]\d+)?)\s+([0-9\s,]+[,\.]\d{2})\s+([0-9\s,]+[,\.]\d{2})",
-                    r"(\d+)\s+(.+?)\s+(\d+(?:[,\.]\d+)?)\s+([0-9\s,]+[,\.]\d{2})\s+([0-9\s,]+[,\.]\d{2})",
+                    r"(\d+)\s+(.+?)\s+(\d+[,\.]?\d*)\s+([0-9\s,]+[,\.]\d{2})\s+([0-9\s,]+[,\.]\d{2})",
+                    r"(.+?)\s+(\d+[,\.]?\d*)\s+([0-9\s,]+[,\.]\d{2})\s+([0-9\s,]+[,\.]\d{2})"
                 ]
             },
-            "payment": {
-                "payment_method": [r"(?:Payment|Method)[\s:]+([A-Za-z\s]+)"],
-                "bank_account": [r"(?:Account|IBAN|Account #)[\s:]+([A-Z0-9\s-]+)"],
             },
             "parties": {
                 "seller": [
@@ -513,61 +1079,28 @@ class DataExtractor:
                 "city": [r"\\b(?:[A-Z][a-z]+(?:\\s+[A-Z][a-z]+)*)\\s*(?:\\d{2}-?\\d{3})?\\s*[A-Za-z]*"]
             },
         },
-        "en": {
-            "totals": {
-                "total": [
-                    r"(?:Total|TOTAL|Amount Due|Total Amount)[\s:]*[A-Z]*\s*([$€£]?\s*[0-9,]+\s*[\\.\,]?\d{0,2})\s*(?:USD|EUR|GBP|PLN)?",
-                    r"(?:Total|TOTAL)[\s:]*[A-Z]*\s*([$€£]?\s*[0-9,]+\s*[\\.\,]?\d{0,2})\s*(?:USD|EUR|GBP|PLN)?"
+        "pl": {
+            "basic": {
+                "document_number": [
+                    r"(?:Faktura|FV|F)\s*[:/]?\\s*([A-Z0-9\\/\\-\\.]+)",
+                    r"(?:Nr\\.?|Numer)\s*:?\\s*([A-Z0-9\\/\\-\\.]+)",
                 ],
-                "subtotal": [
-                    r"(?:Subtotal|Sub-total)[\s:]*[A-Z]*\s*([$€£]?\s*[0-9,]+\s*[\\.\,]?\d{0,2})",
-                    r"(?:Net|Net Amount)[\s:]*[A-Z]*\s*([$€£]?\s*[0-9,]+\s*[\\.\,]?\d{0,2})"
+                "document_date": [
+                    r"(?:Data faktury|Data wystawienia)[\s:]+(\\d{1,2}[-/]\\d{1,2}[-/]\\d{2,4})",
+                    r"Data:\\s*(\\d{1,2}[-/]\\d{1,2}[-/]\\d{2,4})",
                 ],
-                "tax_amount": [
-                    r"(?:Tax|VAT|TAX)[\s:]*[A-Z]*\s*([$€£]?\s*[0-9,]+\s*[\\.\,]?\d{0,2})",
-                    r"(?:VAT|TAX)[\s(]+\d+%[\s)]*[A-Z]*\s*([$€£]?\s*[0-9,]+\s*[\\.\,]?\d{0,2})"
-                ],
-                    ],
-                    "subtotal": [r"(?:Netto|Suma netto)\s*:?\s*([0-9\s,]+[,\.]\d{2})"],
-                    "tax_amount": [r"(?:VAT|Podatek)\s*:?\s*([0-9\s,]+[,\.]\d{2})"],
-                },
-                "items": {
-                    "line_item": [
-                        r"(.+?)\s+(\d+(?:[,\.]\d+)?)\s+([0-9\s,]+[,\.]\d{2})\s+([0-9\s,]+[,\.]\d{2})",
-                        r"(\d+)\s+(.+?)\s+(\d+(?:[,\.]\d+)?)\s+([0-9\s,]+[,\.]\d{2})\s+([0-9\s,]+[,\.]\d{2})",
-                    ]
-            },
-            "items": {
-                "line_item": [
-                    r"^(.+?)\\s+([-]?\\d+(?:\\.\\d+)?)\\s+([$€£]?\\s*[0-9,]+\\s*[\\.,]?\\d{2})\\s+([$€£]?\\s*[0-9,]+\\s*[\\.,]?\\d{2})\\s*$",
-                    r"^(.+?)\\s+([$€£]?\\s*[0-9,]+\\s*[\\.,]?\\d{2})\\s*$",
-                    r"^(.+?)\\s+([-]?\\s*[0-9,]+\\s*[\\.,]?\\d{2})\\s+([-]?\\s*[0-9,]+\\s*[\\.,]?\\d{2})\\s*$"
-                ]
-            },
-            "payment": {
-                "payment_method": [r"(?:Payment|Method)[\\s:]+([A-Za-z\\s]+)"],
-                "bank_account": [r"(?:Account|IBAN|Account #)[\\s:]+([A-Z0-9\\s-]+)"],
-            },
-            "parties": {
-                "seller": [
-                    r"(?:From|Seller|Vendor|Provider)[\\s:]+(.+?)(?=\\s*(?:To|Buyer|Client|Customer|$))",
-                    r"(?:Bill From|Issuer)[\\s:]+(.+?)(?=\\s*(?:Bill To|Recipient|$))"
-                ],
-                "buyer": [
-                    r"(?:To|Bill To|Buyer|Client|Customer)[\\s:]+(.+?)(?=\\s*(?:From|Seller|Vendor|$))",
-                    r"(?:Ship To|Recipient)[\\s:]+(.+?)(?=\\s*(?:From|Issuer|$))"
+                "due_date": [
+                    r"(?:Termin płatności|Do zapłaty do)[\s:]+(\\d{1,2}[-/]\\d{1,2}[-/]\\d{2,4})",
+                    r"Termin:\\s*(\\d{1,2}[-/]\\d{1,2}[-/]\\d{2,4})",
                 ]
             },
             "contact": {
                 "email": [r"([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})"],
                 "phone": [r"(?:\\+?\\d{1,3}[-.\\s]?)?\\(?\\d{3}\\)?[-.\\s]?\\d{3}[-.\\s]?\\d{3,4}"],
-                "tax_id": [r"(?:VAT|TAX|NIP|NIPU|VAT\\s*ID)[\\s:]*([A-Z0-9\\s-]+)", r"\\b[A-Z]{2}[0-9A-Z\\s-]{8,}\\b"]
-            },
-            "address": {
-                "postal_code": [r"\\b[A-Z0-9]{2,4}\\s*[\\-\\s]?\\s*[A-Z0-9]{2,4}\\b"],
-                "city": [r"\\b(?:[A-Z][a-z]+(?:\\s+[A-Z][a-z]+)*)\\s*(?:\\d{2}-?\\d{3})?\\s*[A-Za-z]*"]
-            },
         },
+        "de": {
+            # ... German patterns ...
+        }
     }
 
 

@@ -4,18 +4,18 @@ Pytest configuration and fixtures for InvOCR tests
 """
 
 import json
-import pytest
+import sys
 import tempfile
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict
 
-import sys
+import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from invocr.core.converter import create_converter
-from invocr.core.ocr import create_ocr_engine
 from invocr.core.extractor import create_extractor
+from invocr.core.ocr import create_ocr_engine
 from invocr.core.validator import create_validator
 
 
@@ -31,38 +31,38 @@ def sample_invoice_data() -> Dict[str, Any]:
             "address": "ul. Testowa 123\n80-001 Gdańsk\nPolska",
             "tax_id": "123-456-78-90",
             "phone": "+48 58 123 45 67",
-            "email": "test@company.pl"
+            "email": "test@company.pl",
         },
         "buyer": {
             "name": "Client Test Ltd.",
             "address": "Test Street 456\n12345 Test City\nPoland",
             "tax_id": "987-654-32-10",
             "phone": "+48 58 987 65 43",
-            "email": "client@test.com"
+            "email": "client@test.com",
         },
         "items": [
             {
                 "description": "Programming services - web development",
                 "quantity": 40,
                 "unit_price": 150.00,
-                "total_price": 6000.00
+                "total_price": 6000.00,
             },
             {
                 "description": "IT consulting - system architecture",
                 "quantity": 8,
                 "unit_price": 200.00,
-                "total_price": 1600.00
-            }
+                "total_price": 1600.00,
+            },
         ],
         "totals": {
             "subtotal": 7600.00,
             "tax_rate": 23.0,
             "tax_amount": 1748.00,
-            "total": 9348.00
+            "total": 9348.00,
         },
         "payment_method": "Bank transfer",
         "bank_account": "PL 12 1234 5678 9012 3456 7890 1234",
-        "notes": "Payment due within 30 days."
+        "notes": "Payment due within 30 days.",
     }
 
 
@@ -104,19 +104,19 @@ def sample_text():
 @pytest.fixture
 def converter():
     """Create converter instance"""
-    return create_converter(['en', 'pl'])
+    return create_converter(["en", "pl"])
 
 
 @pytest.fixture
 def ocr_engine():
     """Create OCR engine instance"""
-    return create_ocr_engine(['en', 'pl'])
+    return create_ocr_engine(["en", "pl"])
 
 
 @pytest.fixture
 def extractor():
     """Create data extractor instance"""
-    return create_extractor(['en', 'pl'])
+    return create_extractor(["en", "pl"])
 
 
 @pytest.fixture
@@ -132,11 +132,12 @@ def validator():
 Tests for OCR functionality
 """
 
-import pytest
 import tempfile
 from pathlib import Path
-from PIL import Image
+
 import numpy as np
+import pytest
+from PIL import Image
 
 from invocr.core.ocr import OCREngine, create_ocr_engine
 
@@ -146,31 +147,31 @@ class TestOCR:
 
     def test_create_ocr_engine(self):
         """Test OCR engine creation"""
-        engine = create_ocr_engine(['en', 'pl'])
+        engine = create_ocr_engine(["en", "pl"])
         assert isinstance(engine, OCREngine)
-        assert 'en' in engine.languages
-        assert 'pl' in engine.languages
+        assert "en" in engine.languages
+        assert "pl" in engine.languages
 
     def test_language_mapping(self):
         """Test language code mapping"""
-        engine = create_ocr_engine(['en', 'pl', 'de'])
-        mapped = engine._map_languages(['en', 'pl', 'de'])
-        assert 'eng' in mapped
-        assert 'pol' in mapped
-        assert 'deu' in mapped
+        engine = create_ocr_engine(["en", "pl", "de"])
+        mapped = engine._map_languages(["en", "pl", "de"])
+        assert "eng" in mapped
+        assert "pol" in mapped
+        assert "deu" in mapped
 
     def test_language_detection(self):
         """Test language detection"""
         engine = create_ocr_engine()
 
         # Polish text
-        assert engine.detect_language("Faktura z dnia dzisiejszego ąćęłńóśźż") == 'pl'
+        assert engine.detect_language("Faktura z dnia dzisiejszego ąćęłńóśźż") == "pl"
 
         # German text
-        assert engine.detect_language("Rechnung für größe Bestellung") == 'de'
+        assert engine.detect_language("Rechnung für größe Bestellung") == "de"
 
         # English text (default)
-        assert engine.detect_language("Invoice for services") == 'en'
+        assert engine.detect_language("Invoice for services") == "en"
 
     def test_image_preprocessing(self, temp_directory):
         """Test image preprocessing"""
@@ -189,11 +190,11 @@ class TestOCR:
 
     @pytest.mark.skipif(
         True,  # Skip by default as requires OCR engines
-        reason="Requires OCR engines installed"
+        reason="Requires OCR engines installed",
     )
     def test_text_extraction(self, temp_directory):
         """Test text extraction from image"""
-        engine = create_ocr_engine(['en'])
+        engine = create_ocr_engine(["en"])
 
         # Create test image with text (would need actual text image)
         # This is a placeholder test
@@ -235,9 +236,10 @@ class TestOCR:
 Tests for format conversion functionality
 """
 
-import pytest
 import json
 from pathlib import Path
+
+import pytest
 
 from invocr.core.converter import UniversalConverter, create_converter
 
@@ -247,10 +249,10 @@ class TestConverter:
 
     def test_create_converter(self):
         """Test converter creation"""
-        converter = create_converter(['en', 'pl'])
+        converter = create_converter(["en", "pl"])
         assert isinstance(converter, UniversalConverter)
-        assert 'en' in converter.languages
-        assert 'pl' in converter.languages
+        assert "en" in converter.languages
+        assert "pl" in converter.languages
 
     def test_format_detection(self):
         """Test automatic format detection"""
@@ -269,7 +271,7 @@ class TestConverter:
         xml_content = converter.json_to_xml(sample_invoice_data)
 
         assert isinstance(xml_content, str)
-        assert xml_content.startswith('<?xml')
+        assert xml_content.startswith("<?xml")
         assert "Invoice" in xml_content
         assert sample_invoice_data["document_number"] in xml_content
         assert "InvoiceLines" in xml_content
@@ -279,7 +281,7 @@ class TestConverter:
         html_content = converter.json_to_html(sample_invoice_data)
 
         assert isinstance(html_content, str)
-        assert html_content.startswith('<!DOCTYPE html>')
+        assert html_content.startswith("<!DOCTYPE html>")
         assert sample_invoice_data["document_number"] in html_content
         assert sample_invoice_data["seller"]["name"] in html_content
         assert sample_invoice_data["buyer"]["name"] in html_content
@@ -288,7 +290,7 @@ class TestConverter:
         """Test data loading and saving"""
         # Test JSON loading
         json_file = temp_directory / "test.json"
-        with open(json_file, 'w', encoding='utf-8') as f:
+        with open(json_file, "w", encoding="utf-8") as f:
             json.dump(sample_invoice_data, f)
 
         loaded_data = converter._load_data(json_file, "json")
@@ -302,22 +304,24 @@ class TestConverter:
         assert "size" in result
 
         # Verify saved content
-        with open(output_file, 'r', encoding='utf-8') as f:
+        with open(output_file, "r", encoding="utf-8") as f:
             saved_data = json.load(f)
         assert saved_data["document_number"] == sample_invoice_data["document_number"]
 
     @pytest.mark.skipif(
         True,  # Skip by default as requires WeasyPrint dependencies
-        reason="Requires WeasyPrint system dependencies"
+        reason="Requires WeasyPrint system dependencies",
     )
-    def test_html_to_pdf_conversion(self, converter, sample_invoice_data, temp_directory):
+    def test_html_to_pdf_conversion(
+        self, converter, sample_invoice_data, temp_directory
+    ):
         """Test HTML to PDF conversion"""
         # Generate HTML
         html_content = converter.json_to_html(sample_invoice_data)
 
         # Save to file
         html_file = temp_directory / "test.html"
-        with open(html_file, 'w', encoding='utf-8') as f:
+        with open(html_file, "w", encoding="utf-8") as f:
             f.write(html_content)
 
         # Convert to PDF
@@ -335,8 +339,9 @@ class TestConverter:
 Tests for REST API functionality
 """
 
-import pytest
 import json
+
+import pytest
 from fastapi.testclient import TestClient
 
 from invocr.api.main import app
@@ -403,6 +408,7 @@ Tests for data extraction functionality
 """
 
 import pytest
+
 from invocr.core.extractor import DataExtractor, create_extractor
 
 
@@ -411,24 +417,24 @@ class TestExtractor:
 
     def test_create_extractor(self):
         """Test extractor creation"""
-        extractor = create_extractor(['en', 'pl'])
+        extractor = create_extractor(["en", "pl"])
         assert isinstance(extractor, DataExtractor)
-        assert 'en' in extractor.languages
-        assert 'pl' in extractor.languages
+        assert "en" in extractor.languages
+        assert "pl" in extractor.languages
 
     def test_language_detection(self, extractor):
         """Test language detection"""
         # Polish text
         polish_text = "Faktura VAT sprzedawca nabywca płatność"
-        assert extractor._detect_language(polish_text) == 'pl'
+        assert extractor._detect_language(polish_text) == "pl"
 
         # English text
         english_text = "Invoice VAT seller buyer payment"
-        assert extractor._detect_language(english_text) == 'en'
+        assert extractor._detect_language(english_text) == "en"
 
         # German text
         german_text = "Rechnung Verkäufer Käufer Zahlung"
-        assert extractor._detect_language(german_text) == 'de'
+        assert extractor._detect_language(german_text) == "de"
 
     def test_extract_invoice_data(self, extractor, sample_text):
         """Test invoice data extraction"""
@@ -500,7 +506,8 @@ Tests for data validation functionality
 """
 
 import pytest
-from invocr.core.validator import InvoiceValidator, create_validator, ValidationError
+
+from invocr.core.validator import InvoiceValidator, ValidationError, create_validator
 
 
 class TestValidator:
@@ -547,7 +554,7 @@ class TestValidator:
             "document_number": 123,  # Should be string
             "seller": "not a dict",  # Should be dict
             "items": "not a list",  # Should be list
-            "totals": []  # Should be dict
+            "totals": [],  # Should be dict
         }
 
         result = validator.validate(invalid_data)
@@ -567,8 +574,15 @@ class TestValidator:
             "document_date": "2030-01-01",
             "seller": {"name": "Test"},
             "buyer": {"name": "Test"},
-            "items": [{"description": "Test", "quantity": 1, "unit_price": 100, "total_price": 100}],
-            "totals": {"total": 100}
+            "items": [
+                {
+                    "description": "Test",
+                    "quantity": 1,
+                    "unit_price": 100,
+                    "total_price": 100,
+                }
+            ],
+            "totals": {"total": 100},
         }
 
         result = validator.validate(future_data)
@@ -581,7 +595,10 @@ class TestValidator:
 
         result = validator.validate(invalid_dates)
         error_messages = [e.message for e in result.errors]
-        assert any("due date" in msg.lower() and "before" in msg.lower() for msg in error_messages)
+        assert any(
+            "due date" in msg.lower() and "before" in msg.lower()
+            for msg in error_messages
+        )
 
     def test_validate_items(self, validator):
         """Test item validation"""
@@ -594,16 +611,16 @@ class TestValidator:
                     "description": "Valid item",
                     "quantity": 2,
                     "unit_price": 50.0,
-                    "total_price": 100.0
+                    "total_price": 100.0,
                 },
                 {
                     "description": "",  # Invalid: empty description
                     "quantity": -1,  # Invalid: negative quantity
                     "unit_price": "not a number",  # Invalid: not numeric
-                    "total_price": 50.0
-                }
+                    "total_price": 50.0,
+                },
             ],
-            "totals": {"total": 150}
+            "totals": {"total": 150},
         }
 
         result = validator.validate(data_with_items)
@@ -624,13 +641,10 @@ class TestValidator:
                     "description": "Item 1",
                     "quantity": 2,
                     "unit_price": 50.0,
-                    "total_price": 100.0
+                    "total_price": 100.0,
                 }
             ],
-            "totals": {
-                "subtotal": 200.0,  # Wrong: should be 100.0
-                "total": 200.0
-            }
+            "totals": {"subtotal": 200.0, "total": 200.0},  # Wrong: should be 100.0
         }
 
         result = validator.validate(data_with_wrong_totals)
@@ -644,14 +658,18 @@ class TestValidator:
             "document_number": "TEST/001",
             "seller": {
                 "name": "Test Seller",
-                "tax_id": "abc-def-gh-ij"  # Invalid: non-numeric
+                "tax_id": "abc-def-gh-ij",  # Invalid: non-numeric
             },
-            "buyer": {
-                "name": "Test Buyer",
-                "tax_id": "12345"  # Warning: too short
-            },
-            "items": [{"description": "Test", "quantity": 1, "unit_price": 100, "total_price": 100}],
-            "totals": {"total": 100}
+            "buyer": {"name": "Test Buyer", "tax_id": "12345"},  # Warning: too short
+            "items": [
+                {
+                    "description": "Test",
+                    "quantity": 1,
+                    "unit_price": 100,
+                    "total_price": 100,
+                }
+            ],
+            "totals": {"total": 100},
         }
 
         result = validator.validate(data_with_tax_ids)
@@ -668,7 +686,9 @@ class TestValidator:
         # Invalid data
         assert validator.validate_quick({}) == False
         assert validator.validate_quick("not a dict") == False
-        assert validator.validate_quick({"document_number": "TEST"}) == False  # Missing items, totals
+        assert (
+            validator.validate_quick({"document_number": "TEST"}) == False
+        )  # Missing items, totals
 
     def test_validation_summary(self, validator, sample_invoice_data):
         """Test validation summary generation"""
@@ -702,17 +722,18 @@ class TestValidator:
 Tests for format handlers
 """
 
-import pytest
 import tempfile
 from pathlib import Path
-from PIL import Image
-import numpy as np
 
-from invocr.formats.pdf import PDFProcessor
+import numpy as np
+import pytest
+from PIL import Image
+
+from invocr.formats.html_handler import HTMLHandler
 from invocr.formats.image import ImageProcessor
 from invocr.formats.json_handler import JSONHandler
+from invocr.formats.pdf import PDFProcessor
 from invocr.formats.xml_handler import XMLHandler
-from invocr.formats.html_handler import HTMLHandler
 
 
 class TestPDFProcessor:
@@ -721,12 +742,11 @@ class TestPDFProcessor:
     def test_pdf_processor_creation(self):
         """Test PDF processor creation"""
         processor = PDFProcessor()
-        assert 'png' in processor.supported_formats
-        assert 'jpg' in processor.supported_formats
+        assert "png" in processor.supported_formats
+        assert "jpg" in processor.supported_formats
 
     @pytest.mark.skipif(
-        True,  # Skip by default as requires PDF files
-        reason="Requires test PDF files"
+        True, reason="Requires test PDF files"  # Skip by default as requires PDF files
     )
     def test_extract_text(self, temp_directory):
         """Test PDF text extraction"""
@@ -747,8 +767,8 @@ class TestImageProcessor:
     def test_image_processor_creation(self):
         """Test image processor creation"""
         processor = ImageProcessor()
-        assert 'png' in processor.supported_formats
-        assert 'jpg' in processor.supported_formats
+        assert "png" in processor.supported_formats
+        assert "jpg" in processor.supported_formats
 
     def test_preprocess_for_ocr(self, temp_directory):
         """Test image preprocessing"""
@@ -788,7 +808,7 @@ class TestImageProcessor:
         processor = ImageProcessor()
 
         # Create test image
-        img = Image.new('RGB', (300, 200), color='red')
+        img = Image.new("RGB", (300, 200), color="red")
         img_path = temp_directory / "info_test.png"
         img.save(img_path)
 
@@ -848,7 +868,7 @@ class TestXMLHandler:
         xml_content = handler.to_xml(sample_invoice_data, "eu_invoice")
 
         assert isinstance(xml_content, str)
-        assert xml_content.startswith('<?xml')
+        assert xml_content.startswith("<?xml")
         assert "<Invoice" in xml_content
         assert sample_invoice_data["document_number"] in xml_content
         assert "InvoiceLines" in xml_content
@@ -862,7 +882,7 @@ class TestXMLHandler:
         xml_content = handler.to_xml(sample_invoice_data, "generic")
 
         assert isinstance(xml_content, str)
-        assert xml_content.startswith('<?xml')
+        assert xml_content.startswith("<?xml")
         assert "<Invoice>" in xml_content
 
 
@@ -885,7 +905,7 @@ class TestHTMLHandler:
             html_content = handler.to_html(sample_invoice_data, template_name)
 
             assert isinstance(html_content, str)
-            assert html_content.startswith('<!DOCTYPE html>')
+            assert html_content.startswith("<!DOCTYPE html>")
             assert sample_invoice_data["document_number"] in html_content
             assert sample_invoice_data["seller"]["name"] in html_content
 
@@ -920,9 +940,10 @@ class TestHTMLHandler:
 Integration tests for complete workflows
 """
 
-import pytest
 import json
 from pathlib import Path
+
+import pytest
 
 from invocr.core.converter import create_converter
 
@@ -937,14 +958,14 @@ class TestIntegration:
         # JSON → XML
         xml_content = converter.json_to_xml(sample_invoice_data)
         xml_file = temp_directory / "test.xml"
-        with open(xml_file, 'w', encoding='utf-8') as f:
+        with open(xml_file, "w", encoding="utf-8") as f:
             f.write(xml_content)
         assert xml_file.exists()
 
         # JSON → HTML
         html_content = converter.json_to_html(sample_invoice_data)
         html_file = temp_directory / "test.html"
-        with open(html_file, 'w', encoding='utf-8') as f:
+        with open(html_file, "w", encoding="utf-8") as f:
             f.write(html_content)
         assert html_file.exists()
 
@@ -960,7 +981,7 @@ class TestIntegration:
 
         # Save original JSON
         json_file = temp_directory / "original.json"
-        with open(json_file, 'w', encoding='utf-8') as f:
+        with open(json_file, "w", encoding="utf-8") as f:
             json.dump(sample_invoice_data, f, ensure_ascii=False, indent=2)
 
         # Convert JSON → XML → back to dict (simplified)

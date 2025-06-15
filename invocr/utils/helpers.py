@@ -281,7 +281,7 @@ def get_file_extension(filename: str) -> str:
     Returns:
         File extension in lowercase without dot
     """
-    return Path(filename).suffix.lstrip('.').lower()
+    return Path(filename).suffix.lstrip(".").lower()
 
 
 def validate_file_extension(filename: str, allowed_extensions: List[str]) -> bool:
