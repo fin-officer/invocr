@@ -71,10 +71,9 @@ from .utils.helpers import (
     ensure_directory,
     get_file_extension,
     get_file_hash,
-    format_file_size,
-    safe_json_loads
+    format_file_size
 )
-from .logger import get_logger, setup_logging
+from .utils.logger import get_logger, setup_logging
 
 __all__ = [
     "get_settings",
