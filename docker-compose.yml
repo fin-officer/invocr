@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  invocr-api:
+    build:
+      context: .
+      target: development
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/home/invocr
+      - uploads:/home/invocr/uploads
+      - output:/home/invocr/output
+      - logs:/home/invocr/logs
+    environment:
+      - ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+      - UPLOAD_DIR=/home/invocr/uploads
+      - OUTPUT_DIR=/home/invocr/output
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  invocr-worker:
+    build:
+      context: .
+      target: development
+    volumes:
+      - .:/home/invocr
+      - uploads:/home/invocr/uploads
+      - output:/home/invocr/output
+      - logs:/home/invocr/logs
+    environment:
+      - ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+      - WORKER_MODE=true
+    command: ["python", "-m", "invocr.cli.commands", "worker", "--daemon"]
+    restart: unless-stopped
+    depends_on:
+      - invocr-api
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+      - uploads:/var/www/uploads
+      - output:/var/www/output
+    depends_on:
+      - invocr-api
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+
+volumes:
+  uploads:
+  output:
+  logs:
+  redis_data:
+
+networks:
+  default:
+    name: invocr-network
+    driver: bridge
