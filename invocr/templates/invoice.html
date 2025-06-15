@@ -1,0 +1,438 @@
+<!-- invocr/templates/invoice.html -->
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faktura {{ invoice_number }}</title>
+    <style>
+        /* Modern Invoice Template */
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #64748b;
+            --success-color: #059669;
+            --background-color: #f8fafc;
+            --border-color: #e2e8f0;
+            --text-color: #1e293b;
+            --light-text: #64748b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background: var(--background-color);
+            font-size: 14px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #3b82f6 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+            position: relative;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="1" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            pointer-events: none;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header .invoice-number {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            font-weight: 500;
+            position: relative;
+            z-index: 1;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .invoice-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .meta-card {
+            background: var(--background-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 24px;
+            transition: all 0.2s ease;
+        }
+
+        .meta-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .meta-card h3 {
+            color: var(--primary-color);
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .meta-card .icon {
+            width: 20px;
+            height: 20px;
+            background: var(--primary-color);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .meta-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .meta-row:last-child {
+            border-bottom: none;
+        }
+
+        .meta-row .label {
+            color: var(--light-text);
+            font-weight: 500;
+        }
+
+        .meta-row .value {
+            font-weight: 600;
+            color: var(--text-color);
+        }
+
+        .parties {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .party-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .party-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .party-card h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .party-info {
+            margin-bottom: 8px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .party-info strong {
+            display: block;
+            font-size: 1.1rem;
+            margin-bottom: 4px;
+        }
+
+        .items-section {
+            margin-bottom: 40px;
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text-color);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--primary-color);
+        }
+
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .items-table thead {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .items-table th {
+            padding: 16px 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .items-table td {
+            padding: 16px 12px;
+            border-bottom: 1px solid var(--border-color);
+            transition: background-color 0.2s ease;
+        }
+
+        .items-table tbody tr:hover {
+            background: var(--background-color);
+        }
+
+        .items-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .items-table .number {
+            text-align: right;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .items-table .index {
+            width: 60px;
+            text-align: center;
+            font-weight: 600;
+            color: var(--light-text);
+        }
+
+        .totals-section {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 40px;
+        }
+
+        .totals-card {
+            background: white;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 30px;
+            min-width: 400px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .totals-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .totals-row:last-child {
+            border-bottom: none;
+        }
+
+        .totals-row .label {
+            font-weight: 500;
+            color: var(--light-text);
+        }
+
+        .totals-row .value {
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .totals-row.total {
+            background: var(--primary-color);
+            color: white;
+            margin: 20px -30px -30px -30px;
+            padding: 20px 30px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            border-radius: 0 0 12px 12px;
+        }
+
+        .footer {
+            background: var(--background-color);
+            border-top: 1px solid var(--border-color);
+            padding: 30px 40px;
+            color: var(--light-text);
+        }
+
+        .footer .notes {
+            margin-bottom: 20px;
+        }
+
+        .footer .notes strong {
+            color: var(--text-color);
+        }
+
+        .footer .generated {
+            font-size: 0.85rem;
+            text-align: center;
+            opacity: 0.8;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 0;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            .parties {
+                grid-template-columns: 1fr;
+            }
+
+            .invoice-meta {
+                grid-template-columns: 1fr;
+            }
+
+            .totals-section {
+                justify-content: center;
+            }
+
+            .totals-card {
+                min-width: auto;
+                width: 100%;
+            }
+
+            .items-table {
+                font-size: 0.8rem;
+            }
+
+            .items-table th,
+            .items-table td {
+                padding: 8px 6px;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            body {
+                background: white;
+                font-size: 12px;
+            }
+
+            .container {
+                box-shadow: none;
+                margin: 0;
+                border-radius: 0;
+            }
+
+            .header {
+                background: var(--primary-color) !important;
+                -webkit-print-color-adjust: exact;
+                color-adjust: exact;
+            }
+
+            .party-card {
+                background: #667eea !important;
+                -webkit-print-color-adjust: exact;
+                color-adjust: exact;
+            }
+
+            .totals-row.total {
+                background: var(--primary-color) !important;
+                -webkit-print-color-adjust: exact;
+                color-adjust: exact;
+            }
+        }
+
+        /* Animation for loading */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .container {
+            animation: fadeIn 0.6s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>FAKTURA</h1>
+            <div class="invoice-number">Nr: {{ document_number }}</div>
+        </header>
+
+        <div class="content">
+            <section class="invoice-meta">
+                <div class="meta-card">
+                    <h3>
+                        <span class="icon">📋</span>
+                        Informacje o dokumencie
+                    </h3>
+                    <div class="meta-row">
+                        <span class="label">Data wystawienia</span>
+                        <span class="value">{{ document_date }}</span>
+                    </div>
+                    <div class="meta-row">
+                        <span class="label">Termin płatności</span>
+                        <span class="value">{{ due_date }}</span>
+                    </div>
+                    <div class="meta-row">
+                        <span class="label">Sposób płatności</span>
+                        <span class="value">{{ payment_method }}</span>
+                    </div>
+                </div>
+
+                <div class="meta-card">
+                    <h3>
+                        <span class="

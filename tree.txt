@@ -1,0 +1,66 @@
+invocr/
+├── pyproject.toml              # Poetry configuration
+├── README.md                   # Dokumentacja
+├── Dockerfile                  # Docker container
+├── docker-compose.yml          # Docker services
+├── .env.example               # Environment variables
+├── .gitignore                 # Git ignore
+│
+├── invocr/                    # Main package
+│   ├── __init__.py
+│   ├── core/                  # Core modules
+│   │   ├── __init__.py
+│   │   ├── ocr.py            # OCR functionality
+│   │   ├── converter.py      # Format conversions
+│   │   ├── extractor.py      # Data extraction
+│   │   └── validator.py      # Data validation
+│   │
+│   ├── formats/              # Format handlers
+│   │   ├── __init__.py
+│   │   ├── pdf.py           # PDF operations
+│   │   ├── image.py         # Image operations
+│   │   ├── json_handler.py  # JSON operations
+│   │   ├── xml_handler.py   # XML operations
+│   │   └── html_handler.py  # HTML operations
+│   │
+│   ├── templates/            # HTML/XML templates
+│   │   ├── invoice.html
+│   │   ├── invoice_eu.xml
+│   │   └── receipt.html
+│   │
+│   ├── api/                  # REST API
+│   │   ├── __init__.py
+│   │   ├── main.py          # FastAPI app
+│   │   ├── routes.py        # API routes
+│   │   └── models.py        # Pydantic models
+│   │
+│   ├── cli/                  # Command line interface
+│   │   ├── __init__.py
+│   │   └── commands.py      # CLI commands
+│   │
+│   └── utils/                # Utilities
+│       ├── __init__.py
+│       ├── config.py        # Configuration
+│       ├── logger.py        # Logging
+│       └── helpers.py       # Helper functions
+│
+├── tests/                    # Test suite
+│   ├── __init__.py
+│   ├── conftest.py          # Pytest configuration
+│   ├── test_ocr.py          # OCR tests
+│   ├── test_converter.py    # Converter tests
+│   ├── test_api.py          # API tests
+│   └── fixtures/            # Test files
+│       ├── sample.pdf
+│       ├── sample.jpg
+│       └── sample.json
+│
+├── scripts/                  # Installation scripts
+│   ├── install.sh           # Linux/Mac installer
+│   ├── install.ps1          # Windows installer
+│   └── setup_env.py         # Environment setup
+│
+└── docs/                     # Documentation
+    ├── api.md               # API documentation
+    ├── cli.md               # CLI documentation
+    └── examples/            # Usage examples

@@ -1,0 +1,132 @@
+# Kubernetes deployment configuration
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: invocr-api
+  namespace: invocr
+  labels:
+    app: invocr-api
+    version: v1.0.0
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: invocr-api
+  template:
+    metadata:
+      labels:
+        app: invocr-api
+        version: v1.0.0
+    spec:
+      containers:
+      - name: invocr-api
+        image: invocr:1.0.0
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: ENVIRONMENT
+          value: "production"
+        - name: WORKERS
+          value: "4"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: invocr-secrets
+              key: database-url
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: invocr-secrets
+              key: redis-url
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 2
+        volumeMounts:
+        - name: uploads
+          mountPath: /app/uploads
+        - name: output
+          mountPath: /app/output
+        - name: logs
+          mountPath: /app/logs
+      volumes:
+      - name: uploads
+        persistentVolumeClaim:
+          claimName: invocr-uploads-pvc
+      - name: output
+        persistentVolumeClaim:
+          claimName: invocr-output-pvc
+      - name: logs
+        persistentVolumeClaim:
+          claimName: invocr-logs-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: invocr-api-service
+  namespace: invocr
+spec:
+  selector:
+    app: invocr-api
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8000
+    protocol: TCP
+  type: ClusterIP
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: invocr-ingress
+  namespace: invocr
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/client-max-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+spec:
+  tls:
+  - hosts:
+    - invocr.yourdomain.com
+    secretName: invocr-tls
+  rules:
+  - host: invocr.yourdomain.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: invocr-api-service
+            port:
+              number: 80

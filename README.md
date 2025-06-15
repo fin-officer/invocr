@@ -443,3 +443,283 @@ This project is licensed under the Apache License - see the [LICENSE](LICENSE) f
 **Made with ❤️ for the open source community**
 
 ⭐ **Star this repository if you find it useful!**
+
+
+
+
+
+
+
+
+# ---
+
+# scripts/setup_env.py
+#!/usr/bin/env python3
+"""
+Environment setup script for InvOCR
+Configures environment variables and validates setup
+"""
+
+import os
+import sys
+from pathlib import Path
+
+def setup_environment():
+    """Setup environment variables and directories"""
+    print("🔧 Setting up InvOCR environment...")
+    
+    # Project root
+    project_root = Path(__file__).parent.parent
+    os.chdir(project_root)
+    
+    # Create directories
+    directories = ["uploads", "output", "temp", "logs", "static"]
+    for directory in directories:
+        Path(directory).mkdir(exist_ok=True)
+        print(f"📁 Created directory: {directory}")
+    
+    # Setup environment file
+    env_file = Path(".env")
+    env_example = Path(".env.example")
+    
+    if not env_file.exists() and env_example.exists():
+        import shutil
+        shutil.copy(env_example, env_file)
+        print("✅ Created .env file from template")
+    elif not env_file.exists():
+        # Create basic .env file
+        create_basic_env_file(env_file)
+        print("✅ Created basic .env file")
+    
+    # Validate setup
+    validate_setup()
+    
+    print("🎉 Environment setup completed!")
+
+def create_basic_env_file(env_path: Path):
+    """Create basic environment file"""
+    content = """# InvOCR Environment Configuration
+ENVIRONMENT=development
+DEBUG=true
+LOG_LEVEL=INFO
+
+# Server
+HOST=0.0.0.0
+PORT=8000
+
+# Storage
+UPLOAD_DIR=./uploads
+OUTPUT_DIR=./output
+TEMP_DIR=./temp
+LOGS_DIR=./logs
+
+# OCR
+DEFAULT_LANGUAGES=en,pl,de,fr,es,it
+OCR_CONFIDENCE_THRESHOLD=0.3
+
+# Processing
+MAX_FILE_SIZE=52428800
+PARALLEL_WORKERS=4
+
+# Security
+SECRET_KEY=change-me-in-production
+"""
+    
+    with open(env_path, 'w', encoding='utf-8') as f:
+        f.write(content)
+
+def validate_setup():
+    """Validate environment setup"""
+    print("🔍 Validating setup...")
+    
+    # Check Python version
+    if sys.version_info < (3, 9):
+        print("❌ Python 3.9+ required")
+        return False
+    
+    print(f"✅ Python {sys.version_info.major}.{sys.version_info.minor}")
+    
+    # Check directories
+    required_dirs = ["uploads", "output", "temp", "logs"]
+    for directory in required_dirs:
+        if Path(directory).exists():
+            print(f"✅ Directory exists: {directory}")
+        else:
+            print(f"❌ Missing directory: {directory}")
+    
+    # Check environment file
+    if Path(".env").exists():
+        print("✅ Environment file exists")
+    else:
+        print("❌ Missing .env file")
+    
+    # Try importing invocr
+    try:
+        import invocr
+        print("✅ InvOCR package importable")
+    except ImportError as e:
+        print(f"❌ Cannot import InvOCR: {e}")
+        print("Run: poetry install")
+    
+    return True
+
+if __name__ == "__main__":
+    setup_environment()
+
+# ---
+
+# docs/api.md
+# InvOCR API Documentation
+
+## Overview
+
+The InvOCR REST API provides endpoints for document conversion and OCR processing.
+
+## Base URL
+
+```
+http://localhost:8000
+```
+
+## Authentication
+
+Currently no authentication required for local development.
+
+## Endpoints
+
+### Health Check
+
+```http
+GET /health
+```
+
+Returns system health status.
+
+### System Information
+
+```http
+GET /info
+```
+
+Returns supported formats, languages, and features.
+
+### Convert File
+
+```http
+POST /convert
+```
+
+Convert uploaded file to specified format.
+
+**Parameters:**
+- `file` (file): Input file
+- `target_format` (string): Output format (json, xml, html, pdf)
+- `languages` (string): Comma-separated language codes
+- `async_processing` (boolean): Process in background
+
+### Check Job Status
+
+```http
+GET /status/{job_id}
+```
+
+Get conversion job status.
+
+### Download Result
+
+```http
+GET /download/{job_id}
+```
+
+Download conversion result.
+
+## Example Usage
+
+```bash
+# Convert PDF to JSON
+curl -X POST "http://localhost:8000/convert" \
+  -F "file=@invoice.pdf" \
+  -F "target_format=json"
+
+# Check status
+curl "http://localhost:8000/status/job-id"
+
+# Download result
+curl "http://localhost:8000/download/job-id" -o result.json
+```
+
+# ---
+
+# docs/cli.md
+# InvOCR CLI Documentation
+
+## Installation
+
+```bash
+poetry install
+```
+
+## Usage
+
+### Basic Commands
+
+```bash
+# Show help
+invocr --help
+
+# Convert single file
+invocr convert input.pdf output.json
+
+# Convert with specific languages
+invocr convert -l en,pl,de document.pdf output.json
+
+# Convert PDF to images
+invocr pdf2img document.pdf ./images/
+
+# Image to JSON (OCR)
+invocr img2json scan.png data.json
+
+# JSON to XML
+invocr json2xml data.json invoice.xml
+
+# Batch processing
+invocr batch ./pdfs/ ./output/ --format json
+
+# Full pipeline
+invocr pipeline document.pdf ./results/
+
+# Start API server
+invocr serve
+```
+
+### Advanced Options
+
+```bash
+# Batch processing with parallelization
+invocr batch ./input/ ./output/ --parallel 8 --format xml
+
+# Custom OCR languages
+invocr img2json scan.png data.json --languages en,pl,de,fr
+
+# Custom templates
+invocr convert data.json invoice.html --template classic
+
+# API server with custom host/port
+invocr serve --host 0.0.0.0 --port 9000
+```
+
+### Examples
+
+```bash
+# Convert invoice PDF to JSON
+invocr convert invoice.pdf invoice.json
+
+# Process receipt image
+invocr img2json receipt.jpg receipt.json --doc-type receipt
+
+# Generate EU standard XML
+invocr json2xml invoice.json eu_invoice.xml
+
+# Create HTML invoice
+invocr json2html invoice.json invoice.html --template modern
+```
