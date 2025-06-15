@@ -1,0 +1,36 @@
+INVOICE #INV-2023-001
+Date: 2023-11-15
+Due Date: 2023-12-15
+
+From: Your Company Inc.
+123 Business Rd.
+New York, NY 10001
+Email: billing@yourcompany.com
+Tax ID: US123456789
+
+To: Acme Corp
+456 Customer St
+Boston, MA 02108
+Email: accounts@acmecorp.com
+Tax ID: US987654321
+
+--------------------------------------------------
+| Description           | Qty | Unit Price | Total   |
+--------------------------------------------------
+| Web Design Services  | 10  | $100.00    | $1,000.00|
+| Hosting (Monthly)    | 1   | $50.00     | $50.00  |
+| Domain Registration | 1   | $15.00     | $15.00  |
+--------------------------------------------------
+
+Subtotal: $1,065.00
+Tax (8%): $85.20
+Total: $1,150.20
+
+Payment Terms: Net 30
+Please make checks payable to Your Company Inc.
+
+Notes: Thank you for your business!
+
+Additional Information:
+- This is a sample invoice for testing purposes
+- Please contact us with any questions

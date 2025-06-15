@@ -1,53 +1,56 @@
 """
-Advanced data extraction from OCR text
-Supports multiple document types and languages
+Data extraction from invoice text
+Simplified version focusing on invoice data extraction
 """
 
 import re
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple, Union
+from datetime import datetime
+from typing import Dict, List, Any, Optional
 
-from dateutil import parser as date_parser
-
-from ..utils.config import get_settings
 from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
-settings = get_settings()
-
 
 class DataExtractor:
-    """Advanced data extractor for invoices, receipts, and payment documents"""
+    """Data extractor for invoice documents"""
 
     def __init__(self, languages: List[str] = None):
-        self.languages = languages or ["en", "pl", "de", "fr", "es"]
+        self.languages = languages or ["en", "pl"]
         self.patterns = self._load_extraction_patterns()
         logger.info(f"Data extractor initialized for languages: {self.languages}")
 
-    def extract_invoice_data(
-        self, text: str, document_type: str = "invoice"
-    ) -> Dict[str, any]:
+    def extract_invoice_data(self, text: str, document_type: str = "invoice") -> Dict[str, Any]:
         """
         Extract structured data from invoice text
 
         Args:
             text: Raw text from OCR
-            document_type: Type of document (invoice, receipt, payment)
+            document_type: Type of document (currently only "invoice" is supported)
 
         Returns:
             Structured data dictionary
         """
-        # Detect language for better pattern matching
-        detected_lang = self._detect_language(text)
-
-        # Initialize data structure based on document type
+        # Initialize data structure
         data = self._get_document_template(document_type)
-
+        
         # Extract basic information
-        data.update(self._extract_basic_info(text, detected_lang))
-
+        data.update(self._extract_basic_info(text, "en"))  # Default to English
+        
         # Extract parties (seller/buyer)
-        data.update(self._extract_parties(text, detected_lang))
+        data.update(self._extract_parties(text, "en"))
+        
+        # Extract items and totals
+        data["items"] = self._extract_items(text)
+        data["totals"] = self._extract_totals(text)
+        
+        # Add metadata
+        data["_metadata"] = {
+            "extraction_timestamp": datetime.utcnow().isoformat(),
+            "document_type": document_type,
+            "confidence": self._calculate_confidence(data, text)
+        }
+        
+        return data
 
         # Extract items/services
         data["items"] = self._extract_items(text, detected_lang)
@@ -159,41 +162,44 @@ class DataExtractor:
     def _extract_parties(self, text: str, language: str) -> Dict[str, Dict]:
         """Extract seller and buyer information"""
         parties = {"seller": {}, "buyer": {}}
-
-        # Split text into potential sections
-        sections = self._split_into_sections(text)
-
-        # Extract TAX IDs first (helps identify parties)
-        tax_ids = self._extract_tax_ids(text)
-
-        # Extract names and addresses
-        names_addresses = self._extract_names_addresses(text, language)
-
+        patterns = self.patterns[language]
+        
+        # Extract seller and buyer sections
+        for party_type in ["seller", "buyer"]:
+            for pattern in patterns.get("parties", {}).get(party_type, []):
+                match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
+                if match:
+                    party_text = match.group(1).strip()
+                    # Extract name (first line)
+                    name = party_text.split('\n')[0].strip()
+                    parties[party_type]["name"] = name
+                    
+                    # Extract address (remaining lines)
+                    address_lines = [line.strip() for line in party_text.split('\n')[1:] if line.strip()]
+                    parties[party_type]["address"] = " ".join(address_lines)
+                    break
+        
         # Extract contact info
-        emails = self._extract_emails(text)
-        phones = self._extract_phones(text)
-
-        # Assign to seller/buyer (first = seller, second = buyer typically)
-        if len(names_addresses) >= 1:
-            parties["seller"].update(names_addresses[0])
-        if len(names_addresses) >= 2:
-            parties["buyer"].update(names_addresses[1])
-
-        if len(tax_ids) >= 1:
-            parties["seller"]["tax_id"] = tax_ids[0]
-        if len(tax_ids) >= 2:
-            parties["buyer"]["tax_id"] = tax_ids[1]
-
-        if len(emails) >= 1:
-            parties["seller"]["email"] = emails[0]
-        if len(emails) >= 2:
-            parties["buyer"]["email"] = emails[1]
-
-        if len(phones) >= 1:
-            parties["seller"]["phone"] = phones[0]
-        if len(phones) >= 2:
-            parties["buyer"]["phone"] = phones[1]
-
+        for party_type in ["seller", "buyer"]:
+            if party_type in parties:
+                # Extract email
+                if "email" not in parties[party_type]:
+                    email_matches = re.findall(
+                        patterns["contact"]["email"][0], 
+                        text, 
+                        re.IGNORECASE
+                    )
+                    if email_matches:
+                        parties[party_type]["email"] = email_matches[0]
+                
+                # Extract tax ID
+                if "tax_id" not in parties[party_type]:
+                    for pattern in patterns["contact"]["tax_id"]:
+                        tax_match = re.search(pattern, text, re.IGNORECASE)
+                        if tax_match:
+                            parties[party_type]["tax_id"] = tax_match.group(1).strip()
+                            break
+        
         return parties
 
     def _extract_items(self, text: str, language: str) -> List[Dict]:
@@ -466,49 +472,61 @@ class DataExtractor:
         if data.get("seller", {}).get("tax_id"):
             score += 1
         if data.get("payment_method"):
-            score += 1
-
-        return min(score / max_score, 1.0)
-
     def _load_extraction_patterns(self) -> Dict[str, Dict]:
-        """Load regex patterns for different languages"""
-        return {
-            "en": {
-                "basic": {
-                    "document_number": [
-                        r"(?:Invoice|INV)\s*[:#]?\s*([A-Z0-9\/\-\.]+)",
-                        r"(?:Number|No\.?)\s*:?\s*([A-Z0-9\/\-\.]+)",
-                    ]
-                },
-                "totals": {
-                    "total": [
-                        r"(?:Total|TOTAL|Amount Due)\s*:?\s*([0-9\s,]+\.?\d{0,2})"
-                    ],
-                    "subtotal": [
-                        r"(?:Subtotal|Sub-total)\s*:?\s*([0-9\s,]+\.?\d{0,2})"
-                    ],
-                    "tax_amount": [r"(?:Tax|VAT)\s*:?\s*([0-9\s,]+\.?\d{0,2})"],
-                },
-                "items": {
-                    "line_item": [
-                        r"(.+?)\s+(\d+(?:\.\d+)?)\s+([0-9,]+\.?\d{2})\s+([0-9,]+\.?\d{2})"
-                    ]
-                },
-                "payment": {
-                    "payment_method": [r"(?:Payment|Method)\s*:?\s*([A-Za-z\s]+)"],
-                    "bank_account": [r"(?:Account|IBAN)\s*:?\s*([A-Z0-9\s]+)"],
-                },
+    """Load and return extraction patterns for different document fields"""
+    return {
+        "pl": {
+            "totals": {
+                "total": [
+                    r"(?:Razem|Do zapłaty|Suma)\s*:?\s*([0-9\s,]+[,\.]\d{2})\s*(?:zł|PLN)?"
+                ],
+                "subtotal": [r"(?:Netto|Suma netto)\s*:?\s*([0-9\s,]+[,\.]\d{2})"],
+                "tax_amount": [r"(?:VAT|Podatek)\s*:?\s*([0-9\s,]+[,\.]\d{2})"],
             },
-            "pl": {
-                "basic": {
-                    "document_number": [
-                        r"(?:Faktura|FV|F)\s*[:/]?\s*([A-Z0-9\/\-\.]+)",
-                        r"(?:Nr\.?|Numer)\s*:?\s*([A-Z0-9\/\-\.]+)",
-                    ]
-                },
-                "totals": {
-                    "total": [
-                        r"(?:Razem|Do zapłaty|Suma)\s*:?\s*([0-9\s,]+[,\.]\d{2})\s*(?:zł|PLN)?"
+            "items": {
+                "line_item": [
+                    r"(.+?)\s+(\d+(?:[,\.]\d+)?)\s+([0-9\s,]+[,\.]\d{2})\s+([0-9\s,]+[,\.]\d{2})",
+                    r"(\d+)\s+(.+?)\s+(\d+(?:[,\.]\d+)?)\s+([0-9\s,]+[,\.]\d{2})\s+([0-9\s,]+[,\.]\d{2})",
+                ]
+            },
+            "payment": {
+                "payment_method": [r"(?:Payment|Method)[\s:]+([A-Za-z\s]+)"],
+                "bank_account": [r"(?:Account|IBAN|Account #)[\s:]+([A-Z0-9\s-]+)"],
+            },
+            "parties": {
+                "seller": [
+                    r"(?:From|Seller|Vendor|Provider)[\s:]+(.+?)(?=\\s*(?:To|Buyer|Client|Customer|$))",
+                    r"(?:Bill From|Issuer)[\s:]+(.+?)(?=\\s*(?:Bill To|Recipient|$))"
+                ],
+                "buyer": [
+                    r"(?:To|Bill To|Buyer|Client|Customer)[\s:]+(.+?)(?=\\s*(?:From|Seller|Vendor|$))",
+                    r"(?:Ship To|Recipient)[\s:]+(.+?)(?=\\s*(?:From|Issuer|$))"
+                ]
+            },
+            "contact": {
+                "email": [r"([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})"],
+                "phone": [r"(?:\\+?\\d{1,3}[-.\\s]?)?\\(?\\d{3}\\)?[-.\\s]?\\d{3}[-.\\s]?\\d{3,4}"],
+                "tax_id": [r"(?:VAT|TAX|NIP|NIPU|VAT\\s*ID)[\\s:]*([A-Z0-9\\s-]+)", r"\\b[A-Z]{2}[0-9A-Z\\s-]{8,}\\b"]
+            },
+            "address": {
+                "postal_code": [r"\\b[A-Z0-9]{2,4}\\s*[\\-\\s]?\\s*[A-Z0-9]{2,4}\\b"],
+                "city": [r"\\b(?:[A-Z][a-z]+(?:\\s+[A-Z][a-z]+)*)\\s*(?:\\d{2}-?\\d{3})?\\s*[A-Za-z]*"]
+            },
+        },
+        "en": {
+            "totals": {
+                "total": [
+                    r"(?:Total|TOTAL|Amount Due|Total Amount)[\s:]*[A-Z]*\s*([$€£]?\s*[0-9,]+\s*[\\.\,]?\d{0,2})\s*(?:USD|EUR|GBP|PLN)?",
+                    r"(?:Total|TOTAL)[\s:]*[A-Z]*\s*([$€£]?\s*[0-9,]+\s*[\\.\,]?\d{0,2})\s*(?:USD|EUR|GBP|PLN)?"
+                ],
+                "subtotal": [
+                    r"(?:Subtotal|Sub-total)[\s:]*[A-Z]*\s*([$€£]?\s*[0-9,]+\s*[\\.\,]?\d{0,2})",
+                    r"(?:Net|Net Amount)[\s:]*[A-Z]*\s*([$€£]?\s*[0-9,]+\s*[\\.\,]?\d{0,2})"
+                ],
+                "tax_amount": [
+                    r"(?:Tax|VAT|TAX)[\s:]*[A-Z]*\s*([$€£]?\s*[0-9,]+\s*[\\.\,]?\d{0,2})",
+                    r"(?:VAT|TAX)[\s(]+\d+%[\s)]*[A-Z]*\s*([$€£]?\s*[0-9,]+\s*[\\.\,]?\d{0,2})"
+                ],
                     ],
                     "subtotal": [r"(?:Netto|Suma netto)\s*:?\s*([0-9\s,]+[,\.]\d{2})"],
                     "tax_amount": [r"(?:VAT|Podatek)\s*:?\s*([0-9\s,]+[,\.]\d{2})"],
@@ -518,41 +536,39 @@ class DataExtractor:
                         r"(.+?)\s+(\d+(?:[,\.]\d+)?)\s+([0-9\s,]+[,\.]\d{2})\s+([0-9\s,]+[,\.]\d{2})",
                         r"(\d+)\s+(.+?)\s+(\d+(?:[,\.]\d+)?)\s+([0-9\s,]+[,\.]\d{2})\s+([0-9\s,]+[,\.]\d{2})",
                     ]
-                },
-                "payment": {
-                    "payment_method": [
-                        r"(?:Sposób płatności|Płatność)\s*:?\s*([A-Za-z\s]+)"
-                    ],
-                    "bank_account": [r"(?:Nr konta|Konto|IBAN)\s*:?\s*([A-Z0-9\s]+)"],
-                },
             },
-            "de": {
-                "basic": {
-                    "document_number": [
-                        r"(?:Rechnung|RG)\s*[:\-]?\s*([A-Z0-9\/\-\.]+)",
-                        r"(?:Nummer|Nr\.?)\s*:?\s*([A-Z0-9\/\-\.]+)",
-                    ]
-                },
-                "totals": {
-                    "total": [
-                        r"(?:Gesamt|Gesamtbetrag|Endbetrag)\s*:?\s*([0-9\s,]+[,\.]\d{2})\s*€?"
-                    ],
-                    "subtotal": [
-                        r"(?:Netto|Zwischensumme)\s*:?\s*([0-9\s,]+[,\.]\d{2})"
-                    ],
-                    "tax_amount": [r"(?:MwSt|Steuer)\s*:?\s*([0-9\s,]+[,\.]\d{2})"],
-                },
-                "items": {
-                    "line_item": [
-                        r"(.+?)\s+(\d+(?:[,\.]\d+)?)\s+([0-9\s,]+[,\.]\d{2})\s+([0-9\s,]+[,\.]\d{2})"
-                    ]
-                },
-                "payment": {
-                    "payment_method": [r"(?:Zahlungsart|Zahlung)\s*:?\s*([A-Za-z\s]+)"],
-                    "bank_account": [r"(?:Kontonummer|IBAN)\s*:?\s*([A-Z0-9\s]+)"],
-                },
+            "items": {
+                "line_item": [
+                    r"^(.+?)\\s+([-]?\\d+(?:\\.\\d+)?)\\s+([$€£]?\\s*[0-9,]+\\s*[\\.,]?\\d{2})\\s+([$€£]?\\s*[0-9,]+\\s*[\\.,]?\\d{2})\\s*$",
+                    r"^(.+?)\\s+([$€£]?\\s*[0-9,]+\\s*[\\.,]?\\d{2})\\s*$",
+                    r"^(.+?)\\s+([-]?\\s*[0-9,]+\\s*[\\.,]?\\d{2})\\s+([-]?\\s*[0-9,]+\\s*[\\.,]?\\d{2})\\s*$"
+                ]
             },
-        }
+            "payment": {
+                "payment_method": [r"(?:Payment|Method)[\\s:]+([A-Za-z\\s]+)"],
+                "bank_account": [r"(?:Account|IBAN|Account #)[\\s:]+([A-Z0-9\\s-]+)"],
+            },
+            "parties": {
+                "seller": [
+                    r"(?:From|Seller|Vendor|Provider)[\\s:]+(.+?)(?=\\s*(?:To|Buyer|Client|Customer|$))",
+                    r"(?:Bill From|Issuer)[\\s:]+(.+?)(?=\\s*(?:Bill To|Recipient|$))"
+                ],
+                "buyer": [
+                    r"(?:To|Bill To|Buyer|Client|Customer)[\\s:]+(.+?)(?=\\s*(?:From|Seller|Vendor|$))",
+                    r"(?:Ship To|Recipient)[\\s:]+(.+?)(?=\\s*(?:From|Issuer|$))"
+                ]
+            },
+            "contact": {
+                "email": [r"([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})"],
+                "phone": [r"(?:\\+?\\d{1,3}[-.\\s]?)?\\(?\\d{3}\\)?[-.\\s]?\\d{3}[-.\\s]?\\d{3,4}"],
+                "tax_id": [r"(?:VAT|TAX|NIP|NIPU|VAT\\s*ID)[\\s:]*([A-Z0-9\\s-]+)", r"\\b[A-Z]{2}[0-9A-Z\\s-]{8,}\\b"]
+            },
+            "address": {
+                "postal_code": [r"\\b[A-Z0-9]{2,4}\\s*[\\-\\s]?\\s*[A-Z0-9]{2,4}\\b"],
+                "city": [r"\\b(?:[A-Z][a-z]+(?:\\s+[A-Z][a-z]+)*)\\s*(?:\\d{2}-?\\d{3})?\\s*[A-Za-z]*"]
+            },
+        },
+    }
 
 
 def create_extractor(languages: List[str] = None) -> DataExtractor:
