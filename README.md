@@ -57,25 +57,101 @@ invocr convert invoice.pdf output.json
 # Process image with specific languages
 invocr img2json receipt.jpg --languages en,pl,de
 
-# Start the API server
-invocr serve
+# Start the API server (use --port 8001 if port 8000 is already in use)
+invocr serve --port 8001
 
 # Run batch processing
 invocr batch ./invoices/ ./output/ --format xml
+
+# Full PDF to HTML conversion pipeline (one step)
+invocr pipeline --input invoice.pdf --output ./output/invoice.html --start-format pdf --end-format html
+
+# Step-by-step PDF to HTML conversion
+invocr pdf2img --input invoice.pdf --output ./temp/invoice.png
+invocr img2json --input ./temp/invoice.png --output ./temp/invoice.json
+invocr json2xml --input ./temp/invoice.json --output ./temp/invoice.xml
+invocr pipeline --input ./temp/invoice.xml --output ./output/invoice.html --start-format xml --end-format html
 ```
 
 ### Using the API
 
 ```python
 import requests
+import time
 
-# Convert document
-response = requests.post(
-    "http://localhost:8000/convert",
-    files={"file": open("document.pdf", "rb")},
-    data={"target_format": "json"}
+# 1. Upload a PDF file
+upload_response = requests.post(
+    "http://localhost:8001/api/v1/upload",
+    files={"file": open("invoice.pdf", "rb")}
 )
-print(response.json())
+file_id = upload_response.json()["file_id"]
+
+# 2. Start the PDF to HTML conversion pipeline
+convert_response = requests.post(
+    "http://localhost:8001/api/v1/convert/pipeline",
+    json={
+        "file_id": file_id,
+        "start_format": "pdf",
+        "end_format": "html",
+        "options": {
+            "languages": ["en", "pl"],
+            "output_type": "file"
+        }
+    }
+)
+task_id = convert_response.json()["task_id"]
+
+# 3. Check conversion status
+while True:
+    status_response = requests.get(f"http://localhost:8001/api/v1/tasks/{task_id}")
+    status = status_response.json()["status"]
+    if status == "completed":
+        result_file_id = status_response.json()["result"]["file_id"]
+        break
+    elif status == "failed":
+        print("Conversion failed:", status_response.json()["error"])
+        break
+    time.sleep(1)  # Wait before checking again
+
+# 4. Download the converted HTML file
+with open("output.html", "wb") as f:
+    download_response = requests.get(f"http://localhost:8001/api/v1/files/{result_file_id}")
+    f.write(download_response.content)
+
+print("Conversion complete! HTML file saved as output.html")
+```
+
+### Using cURL
+
+```bash
+# 1. Upload a PDF file
+curl -X POST "http://localhost:8001/api/v1/upload" \
+  -H "accept: application/json" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@invoice.pdf"
+
+# 2. Start the conversion pipeline (replace YOUR_FILE_ID)
+curl -X POST "http://localhost:8001/api/v1/convert/pipeline" \
+  -H "accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "file_id": "YOUR_FILE_ID",
+        "start_format": "pdf",
+        "end_format": "html",
+        "options": {
+          "languages": ["en", "pl"],
+          "output_type": "file"
+        }
+      }'
+
+# 3. Check task status (replace YOUR_TASK_ID)
+curl -X GET "http://localhost:8001/api/v1/tasks/YOUR_TASK_ID" \
+  -H "accept: application/json"
+
+# 4. Download the result (replace YOUR_RESULT_FILE_ID)
+curl -X GET "http://localhost:8001/api/v1/files/YOUR_RESULT_FILE_ID" \
+  -H "accept: application/json" \
+  -o output.html
 ```
 
 ## 🏗️ Project Structure
@@ -440,10 +516,13 @@ invocr json2xml data.json invoice.xml
 invocr batch ./input_files/ ./output/ --format json --parallel 4
 
 # Full pipeline: PDF → IMG → JSON → XML → HTML → PDF
-invocr pipeline document.pdf ./results/
+invocr pipeline --input document.pdf --output ./results/
 
-# Start API server
-invocr serve --host 0.0.0.0 --port 8000
+# Start API server (use port 8001 if 8000 is already in use)
+invocr serve --host 0.0.0.0 --port 8001
+
+# Start API server with verbose logging
+invocr -v serve --port 8001
 ```
 
 ### REST API
