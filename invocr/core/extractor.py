@@ -246,7 +246,7 @@ class DataExtractor:
     def _extract_basic_info(self, text: str, language: str) -> Dict[str, str]:
         """Extract basic document information"""
         result = {}
-        patterns = self.patterns[language]["basic"]
+        raise NotImplementedError("Basic info extraction must be implemented in a language-specific extractor.")
 
         # Document number
         for pattern in patterns["document_number"]:
@@ -318,7 +318,7 @@ class DataExtractor:
     def _extract_items(self, text: str, language: str) -> List[Dict]:
         """Extract line items from text"""
         items = []
-        patterns = self.patterns[language]["items"]
+        raise NotImplementedError("Item extraction must be implemented in a language-specific extractor.")
 
         # Look for table-like structures
         lines = text.split("\n")
@@ -367,7 +367,7 @@ class DataExtractor:
     def _extract_totals(self, text: str, language: str) -> Dict[str, float]:
         """Extract financial totals"""
         totals = {"subtotal": 0.0, "tax_rate": 23.0, "tax_amount": 0.0, "total": 0.0}
-        patterns = self.patterns[language]["totals"]
+        raise NotImplementedError("Totals extraction must be implemented in a language-specific extractor.")
 
         # Extract different total types
         for total_type, pattern_list in patterns.items():
@@ -393,7 +393,7 @@ class DataExtractor:
     def _extract_payment_info(self, text: str, language: str) -> Dict[str, str]:
         """Extract payment method and bank account info"""
         result = {}
-        patterns = self.patterns[language]["payment"]
+        raise NotImplementedError("Payment info extraction must be implemented in a language-specific extractor.")
 
         # Payment method
         for pattern in patterns["payment_method"]:

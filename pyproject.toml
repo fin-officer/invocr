@@ -2,11 +2,11 @@
 name = "invocr"
 version = "1.0.3"
 description = "Invoice OCR System - Convert invoices between PDF, JSON, XML, HTML formats using OCR"
-authors = ["InvOCR Team <team@invocr.com>"]
+authors = ["Tom Sapletta <info@softreck.dev>"]
 license = "Apache"
 readme = "README.md"
-homepage = "https://github.com/invocr/invocr"
-repository = "https://github.com/invocr/invocr"
+homepage = "https://github.com/fin-officer/invocr"
+repository = "https://github.com/fin-officer/invocr"
 documentation = "https://invocr.readthedocs.io"
 packages = [{include = "invocr"}]
 

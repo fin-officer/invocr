@@ -397,7 +397,7 @@ For support, please open an issue in the [issue tracker](https://github.com/fin-
 ---
 
 <div align="center">
-  Made with ❤️ by the InvOCR Team
+  Made with ❤️ by the Tom Sapletta
 </div>
 poetry install
 

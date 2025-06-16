@@ -5,8 +5,8 @@ Universal document processing with OCR capabilities
 """
 
 __version__ = "1.0.0"
-__author__ = "InvOCR Team"
-__email__ = "team@invocr.com"
+__author__ = "Tom Sapletta"
+__email__ = "info@softreck.dev"
 __description__ = "Invoice OCR and Conversion System"
 
 # Import core functionality
@@ -33,7 +33,7 @@ PACKAGE_INFO = {
     "description": __description__,
     "author": __author__,
     "email": __email__,
-    "url": "https://github.com/invocr/invocr",
+    "url": "https://github.com/fin-officer/invocr",
     "license": "MIT",
 }
 

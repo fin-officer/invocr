@@ -174,7 +174,7 @@ jobs:
       id: meta
       uses: docker/metadata-action@v5
       with:
-        images: invocr/invocr
+        images: fin-officer/invocr
         tags: |
           type=ref,event=branch
           type=ref,event=pr
