@@ -1,10 +1,11 @@
 """
 Base extractor class for invoice data extraction.
 """
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Tuple
 import re
 from datetime import datetime
 import logging
+from dateutil import parser as date_parser
 
 logger = logging.getLogger(__name__)
 
@@ -197,18 +198,100 @@ class DataExtractor:
         """Parse date string into ISO format (YYYY-MM-DD)."""
         if not date_str or not isinstance(date_str, str):
             return ""
-            
         date_str = date_str.strip()
         date_formats = [
             "%Y-%m-%d", "%d.%m.%Y", "%d/%m/%Y", "%d-%m-%Y",
             "%Y.%m.%d", "%Y/%m/%d", "%d %b %Y", "%d %B %Y"
         ]
-        
         for fmt in date_formats:
             try:
                 dt = datetime.strptime(date_str, fmt)
                 return dt.strftime("%Y-%m-%d")
             except ValueError:
                 continue
-                
-        return ""
+        # Try dateutil as fallback
+        try:
+            dt = date_parser.parse(date_str, dayfirst=True)
+            return dt.strftime("%Y-%m-%d")
+        except Exception:
+            return ""
+
+    def _extract_dates(self, text: str) -> List[str]:
+        """Extract and parse dates from text."""
+        date_patterns = [
+            r"(\d{1,2}[\-\./]\d{1,2}[\-\./]\d{4})",
+            r"(\d{4}[\-\./]\d{1,2}[\-\./]\d{1,2})",
+            r"(\d{1,2}\s+\w+\s+\d{4})",
+        ]
+        dates = []
+        for pattern in date_patterns:
+            matches = re.findall(pattern, text)
+            for match in matches:
+                try:
+                    parsed_date = date_parser.parse(match, dayfirst=True)
+                    date_str = parsed_date.strftime("%Y-%m-%d")
+                    if date_str not in dates:
+                        dates.append(date_str)
+                except Exception:
+                    continue
+        return sorted(dates)
+
+    def _extract_tax_ids(self, text: str) -> List[str]:
+        """Extract tax identification numbers."""
+        patterns = [
+            r"(?:NIP|VAT|Tax\s*ID)[:\s]*([0-9\-\s]{8,15})",
+            r"([0-9]{3}[\-\s]?[0-9]{3}[\-\s]?[0-9]{2}[\-\s]?[0-9]{2})",
+            r"([0-9]{2}[\-\s]?[0-9]{8})",
+        ]
+        tax_ids = []
+        for pattern in patterns:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            for match in matches:
+                clean_id = re.sub(r"[\-\s]", "", match)
+                if len(clean_id) >= 8 and clean_id not in tax_ids:
+                    tax_ids.append(match.strip())
+        return tax_ids
+
+    def _extract_emails(self, text: str) -> List[str]:
+        """Extract email addresses."""
+        pattern = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"
+        return list(set(re.findall(pattern, text)))
+
+    def _extract_phones(self, text: str) -> List[str]:
+        """Extract phone numbers."""
+        patterns = [
+            r"(?:\+48\s?)?(?:\d{2,3}[\s\-]?\d{3}[\s\-]?\d{2,3}[\s\-]?\d{2,3})",
+            r"(?:\+\d{1,3}\s?)?\(?\d{2,4}\)?[\s\-]?\d{3,4}[\s\-]?\d{3,4}",
+        ]
+        phones = []
+        for pattern in patterns:
+            matches = re.findall(pattern, text)
+            phones.extend(matches)
+        return list(set(phones))
+
+    def _extract_names_addresses(self, text: str, language: str) -> List[Dict]:
+        """Extract company names and addresses (simplified heuristic)."""
+        lines = [line.strip() for line in text.split("\n") if line.strip()]
+        entities = []
+        current_entity = {"name": "", "address": ""}
+        for line in lines:
+            if any(word in line.lower() for word in ["faktura", "invoice", "total", "suma"]):
+                continue
+            if len(line) > 5 and any(c.isupper() for c in line):
+                if not current_entity["name"]:
+                    current_entity["name"] = line
+                else:
+                    current_entity["address"] += line + " "
+                if len(current_entity["address"]) > 20:
+                    entities.append({
+                        "name": current_entity["name"],
+                        "address": current_entity["address"].strip(),
+                    })
+                    current_entity = {"name": "", "address": ""}
+        return entities[:2]  # Return max 2 entities
+
+    def _split_into_sections(self, text: str) -> List[str]:
+        """Split text into logical sections."""
+        import re
+        return re.split(r"\n{2,}|\n\s*-{2,}\s*\n", text)
+

@@ -166,12 +166,8 @@ class DataExtractor:
             return "pl"
         return "en"
         
-    def _load_extraction_patterns(self) -> Dict[str, Any]:
-        """
-        Load extraction patterns for different languages and fields.
-        
-        Returns:
-            Dictionary of patterns organized by language and field
+    def _load_extraction_patterns(self) -> Dict[str, Dict]:
+        """Return a dictionary of regex patterns for extraction (Polish and German example)"""
         """
         return {
             "en": {
@@ -307,32 +303,13 @@ class DataExtractor:
                     ],
                     "payment_method": [
                         r"forma płatności[^\n:]*[:\s]+([^\n]+)",
-                        r"zapłacono[^\n:]*[:\s]+([^\n]+)",
-                        r"(przelewem|gotówką|kartą|przelew|przelewem bankowym)"
+                        r"zapłacono[^\n:]*[:\s]+([^\n]+)"
                     ]
                 }
             },
             "de": {
-                # Placeholder for German patterns - to be implemented
-                "document_number": [
-                    r"(?:rechnung|rnr\.?|rechnungsnummer)[^\n:]*[:\s]*([A-Z0-9\-]+)",
-                    r"(?:rechnung|rnr\.?|nr\.?)[^\n\d]*(\d+)"
-                ],
-                "dates": {
-                    "issue_date": [
-                        r"rechnungsdatum[^\n:]*[:\s]+(\d{1,2}[\./]\d{1,2}[\./]\d{2,4})",
-                        r"datum[^\n:]*[:\s]+(\d{1,2}[\./]\d{1,2}[\./]\d{2,4})",
-                        r"(\d{1,2}[\./]\d{1,2}[\./]\d{2,4})\s*(?=rechnung|datum|rnr)"
-                    ],
-                    "due_date": [
-                        r"fällig(?:keit)?[^\n:]*[:\s]+(\d{1,2}[\./]\d{1,2}[\./]\d{2,4})",
-                        r"zahlbar bis[^\n:]*[:\s]+(\d{1,2}[\./]\d{1,2}[\./]\d{2,4})",
-                        r"(\d{1,2}[\./]\d{1,2}[\./]\d{2,4})\s*(?=fällig|zahlbar)"
-                    ]
-                },
-                "totals": {
-                    "subtotal": [
-                        r"netto[^\d]*([0-9\s,]+[\.,]\d{2})",
+                "payment": {
+                    "payment_method": [
                         r"zwischensumme[^\d]*([0-9\s,]+[\.,]\d{2})"
                     ],
                     "tax_amount": [
@@ -488,65 +465,6 @@ class DataExtractor:
         return min(score / max_score, 1.0)
         
     def _parse_date(self, date_str: str) -> str:
-        """Parse date string into ISO format"""
-        try:
-            # Try common date formats
-            for fmt in ["%d.%m.%Y", "%d-%m-%Y", "%d/%m/%Y", "%Y-%m-%d"]:
-                try:
-                    dt = datetime.strptime(date_str, fmt)
-                    return dt.strftime("%Y-%m-%d")
-                except ValueError:
-                    continue
-            return date_str.strip()
-        except (ValueError, AttributeError):
-            return date_str.strip()
-
-    def _load_extraction_patterns(self) -> Dict[str, Dict]:
-        """Load and return extraction patterns for different document fields"""
-        return {
-            "en": {
-                "document_number": [
-                    r"(?:Invoice|INVOICE|Bill|BILL)[\s:]*[#]?[\s]*(\S+)",
-                    r"(?:No\.?|Number|Nr\.?|#)[\s:]*([A-Z0-9\-\/]+)",
-                    r"F[0-9]{4,}-[0-9]+"
-                ],
-                "dates": {
-                    "issue_date": [
-                        r"(?:Date|Invoice Date|Issued|Date of Issue)[\s:]+(\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{2,4})",
-                        r"(\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{2,4})\s*(?=Invoice|Date|$)"
-                    ],
-                    "due_date": [
-                        r"(?:Due Date|Due|Payment Due|Due On)[\s:]+(\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{2,4})",
-                        r"(?:Payment Terms|Terms)[\s:]+(?:Net|NET)\s*(\d+)\s*(?:days|Days|day|Day)"
-                    ]
-                },
-                "parties": {
-                    "seller": [
-                        r"(?:From|Seller|Vendor|Provider)[\s:]+(.+?)(?=\s*(?:To|Buyer|Client|Customer|$))",
-                        r"(?:Bill From|Issuer)[\s:]+(.+?)(?=\s*(?:Bill To|Recipient|$))"
-                    ],
-                    "buyer": [
-                        r"(?:To|Bill To|Buyer|Client|Customer)[\s:]+(.+?)(?=\s*(?:From|Seller|Vendor|$))",
-                        r"(?:Ship To|Recipient)[\s:]+(.+?)(?=\s*(?:From|Issuer|$))"
-                    ]
-                },
-                "items": {
-                    "line_item": [
-                        r"(\d+)\s+(.+?)\s+([$€£]?\s*[0-9,]+\s*[\\.\,]?\d{0,2})\s+([$€£]?\s*[0-9,]+\s*[\\.\,]?\d{0,2})",
-                        r"(.+?)\s+([$€£]?\s*[0-9,]+\s*[\\.\,]?\d{0,2})\s+([$€£]?\s*[0-9,]+\s*[\\.\,]?\d{0,2})"
-                    ]
-                },
-                "totals": {
-                    "total": [
-                        r"(?:Total|TOTAL|Amount Due|Total Amount)[\s:]*[A-Z]*\s*([$€£]?\s*[0-9,]+\s*[\\.\,]?\d{0,2})\s*(?:USD|EUR|GBP|PLN)?"
-                    ],
-                    "subtotal": [
-                        r"(?:Subtotal|Sub-total)[\s:]*[A-Z]*\s*([$€£]?\s*[0-9,]+\s*[\\.\,]?\d{0,2})",
-                        r"(?:Net|Net Amount)[\s:]*[A-Z]*\s*([$€£]?\s*[0-9,]+\s*[\\.\,]?\d{0,2})"
-                    ],
-                    "tax_amount": [
-                        r"(?:Tax|VAT|TAX)[\s:]*[A-Z]*\s*([$€£]?\s*[0-9,]+\s*[\\.\,]?\d{0,2})",
-                        r"(?:VAT|TAX)[\s(]+\d+%[\s)]*[A-Z]*\s*([$€£]?\s*[0-9,]+\s*[\\.\,]?\d{0,2})"
                     ]
                 }
             },
@@ -844,108 +762,6 @@ class DataExtractor:
 
         return result
 
-    def _extract_dates(self, text: str) -> List[str]:
-        """Extract and parse dates from text"""
-        date_patterns = [
-            r"(\d{1,2}[\-\./]\d{1,2}[\-\./]\d{4})",
-            r"(\d{4}[\-\./]\d{1,2}[\-\./]\d{1,2})",
-            r"(\d{1,2}\s+\w+\s+\d{4})",
-        ]
-
-        dates = []
-        for pattern in date_patterns:
-            matches = re.findall(pattern, text)
-            for match in matches:
-                try:
-                    parsed_date = date_parser.parse(match, dayfirst=True)
-                    date_str = parsed_date.strftime("%Y-%m-%d")
-                    if date_str not in dates:
-                        dates.append(date_str)
-                except:
-                    continue
-
-        return sorted(dates)
-
-    def _extract_tax_ids(self, text: str) -> List[str]:
-        """Extract tax identification numbers"""
-        patterns = [
-            r"(?:NIP|VAT|Tax\s*ID)[:\s]*([0-9\-\s]{8,15})",
-            r"([0-9]{3}[\-\s]?[0-9]{3}[\-\s]?[0-9]{2}[\-\s]?[0-9]{2})",
-            r"([0-9]{2}[\-\s]?[0-9]{8})",
-        ]
-
-        tax_ids = []
-        for pattern in patterns:
-            matches = re.findall(pattern, text, re.IGNORECASE)
-            for match in matches:
-                clean_id = re.sub(r"[\-\s]", "", match)
-                if len(clean_id) >= 8 and clean_id not in tax_ids:
-                    tax_ids.append(match.strip())
-
-        return tax_ids
-
-    def _extract_emails(self, text: str) -> List[str]:
-        """Extract email addresses"""
-        pattern = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"
-        return list(set(re.findall(pattern, text)))
-
-    def _extract_phones(self, text: str) -> List[str]:
-        """Extract phone numbers"""
-        patterns = [
-            r"(?:\+48\s?)?(?:\d{2,3}[\s\-]?\d{3}[\s\-]?\d{2,3}[\s\-]?\d{2,3})",
-            r"(?:\+\d{1,3}\s?)?\(?\d{2,4}\)?[\s\-]?\d{3,4}[\s\-]?\d{3,4}",
-        ]
-
-        phones = []
-        for pattern in patterns:
-            matches = re.findall(pattern, text)
-            phones.extend(matches)
-
-        return list(set(phones))
-
-    def _extract_names_addresses(self, text: str, language: str) -> List[Dict]:
-        """Extract company names and addresses"""
-        # This is a simplified implementation
-        # In practice, you'd use NER (Named Entity Recognition) or more sophisticated methods
-
-        lines = [line.strip() for line in text.split("\n") if line.strip()]
-
-        # Look for patterns that indicate company names/addresses
-        entities = []
-        current_entity = {"name": "", "address": ""}
-
-        for line in lines:
-            # Skip obvious non-entity lines
-            if any(
-                word in line.lower() for word in ["faktura", "invoice", "total", "suma"]
-            ):
-                continue
-
-            # Simple heuristic: lines with proper case might be names/addresses
-            if len(line) > 5 and any(c.isupper() for c in line):
-                if not current_entity["name"]:
-                    current_entity["name"] = line
-                else:
-                    current_entity["address"] += line + " "
-
-                # If we have enough info, save entity
-                if len(current_entity["address"]) > 20:
-                    entities.append(
-                        {
-                            "name": current_entity["name"],
-                            "address": current_entity["address"].strip(),
-                        }
-                    )
-                    current_entity = {"name": "", "address": ""}
-
-        return entities[:2]  # Return max 2 entities
-
-    def _split_into_sections(self, text: str) -> List[str]:
-        """Split text into logical sections"""
-        # Split by multiple newlines or obvious section breaks
-        sections = re.split(r"\n\s*\n|\n-+\n|\n=+\n", text)
-        return [section.strip() for section in sections if section.strip()]
-
     def _detect_language(self, text: str) -> str:
         """Simple language detection"""
         # Check for language-specific characters and words
@@ -1047,17 +863,41 @@ class DataExtractor:
         return min(score / max_score, 1.0)
 
     def _load_extraction_patterns(self) -> Dict[str, Dict]:
-                    r"(?:Razem|Do zapłaty|Suma)\s*:?\s*([0-9\s,]+[,\.]\d{2})\s*(?:zł|PLN)?"
-                ],
-                "subtotal": [r"(?:Netto|Suma netto)\s*:?\s*([0-9\s,]+[,\.]\d{2})"],
-                "tax_amount": [r"(?:VAT|Podatek)\s*:?\s*([0-9\s,]+[,\.]\d{2})"],
+        """Return a dictionary of regex patterns for extraction (Polish and German example)"""
+        return {
+            "pl": {
+                "totals": {
+                    "total": [r"(?:Razem|Do zapłaty|Suma)\s*:?\s*([0-9\s,]+[,\.]\d{2})\s*(?:zł|PLN)?"],
+                    "subtotal": [r"(?:Netto|Suma netto)\s*:?\s*([0-9\s,]+[,\.]\d{2})"],
+                    "tax_amount": [r"(?:VAT|Podatek)\s*:?\s*([0-9\s,]+[,\.]\d{2})"],
+                },
+                "items": {
+                    "line_item": [
+                        r"(\d+)\s+(.+?)\s+(\d+[,\.]?\d*)\s+([0-9\s,]+[,\.]\d{2})\s+([0-9\s,]+[,\.]\d{2})",
+                        r"(.+?)\s+(\d+[,\.]?\d*)\s+([0-9\s,]+[,\.]\d{2})\s+([0-9\s,]+[,\.]\d{2})"
+                    ]
+                },
+                "parties": {
+                    "seller": [
+                        r"(?:From|Seller|Vendor|Provider)[\s:]+(.+?)(?=\\s*(?:To|Buyer|Client|Customer|$))",
+                        r"(?:Bill From|Issuer)[\s:]+(.+?)(?=\\s*(?:Bill To|Recipient|$))"
+                    ],
+                    "buyer": [
+                        r"(?:To|Bill To|Buyer|Client|Customer)[\s:]+(.+?)(?=\\s*(?:From|Seller|Vendor|$))",
+                        r"(?:Ship To|Recipient)[\s:]+(.+?)(?=\\s*(?:From|Issuer|$))"
+                    ]
+                },
+                "contact": {
+                    "email": [r"([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})"],
+                    "phone": [r"(?:\\+?\\d{1,3}[-.\\s]?)?\\(?\\d{3}\\)?[-.\\s]?\\d{3}[-.\\s]?\\d{3,4}"],
+                    "tax_id": [r"(?:VAT|TAX|NIP|NIPU|VAT\\s*ID)[\\s:]*([A-Z0-9\\s-]+)", r"\\b[A-Z]{2}[0-9A-Z\\s-]{8,}\\b"]
+                },
             },
             "items": {
                 "line_item": [
                     r"(\d+)\s+(.+?)\s+(\d+[,\.]?\d*)\s+([0-9\s,]+[,\.]\d{2})\s+([0-9\s,]+[,\.]\d{2})",
                     r"(.+?)\s+(\d+[,\.]?\d*)\s+([0-9\s,]+[,\.]\d{2})\s+([0-9\s,]+[,\.]\d{2})"
                 ]
-            },
             },
             "parties": {
                 "seller": [
@@ -1076,34 +916,18 @@ class DataExtractor:
             },
             "address": {
                 "postal_code": [r"\\b[A-Z0-9]{2,4}\\s*[\\-\\s]?\\s*[A-Z0-9]{2,4}\\b"],
-                "city": [r"\\b(?:[A-Z][a-z]+(?:\\s+[A-Z][a-z]+)*)\\s*(?:\\d{2}-?\\d{3})?\\s*[A-Za-z]*"]
-            },
-        },
-        "pl": {
-            "basic": {
-                "document_number": [
-                    r"(?:Faktura|FV|F)\s*[:/]?\\s*([A-Z0-9\\/\\-\\.]+)",
-                    r"(?:Nr\\.?|Numer)\s*:?\\s*([A-Z0-9\\/\\-\\.]+)",
-                ],
-                "document_date": [
-                    r"(?:Data faktury|Data wystawienia)[\s:]+(\\d{1,2}[-/]\\d{1,2}[-/]\\d{2,4})",
-                    r"Data:\\s*(\\d{1,2}[-/]\\d{1,2}[-/]\\d{2,4})",
-                ],
-                "due_date": [
-                    r"(?:Termin płatności|Do zapłaty do)[\s:]+(\\d{1,2}[-/]\\d{1,2}[-/]\\d{2,4})",
-                    r"Termin:\\s*(\\d{1,2}[-/]\\d{1,2}[-/]\\d{2,4})",
-                ]
-            },
-            "contact": {
-                "email": [r"([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})"],
-                "phone": [r"(?:\\+?\\d{1,3}[-.\\s]?)?\\(?\\d{3}\\)?[-.\\s]?\\d{3}[-.\\s]?\\d{3,4}"],
-        },
-        "de": {
-            # ... German patterns ...
-        }
     }
-
+}
 
 def create_extractor(languages: List[str] = None) -> DataExtractor:
-    """Factory function to create data extractor instance"""
+    """
+    Factory function to create data extractor instance.
+
+    Args:
+        languages (List[str], optional): List of languages to support. Defaults to None.
+
+    Returns:
+        DataExtractor: Data extractor instance.
+    """
     return DataExtractor(languages)
+
