@@ -141,8 +141,8 @@ DEFAULT_RULES: Dict[str, Any] = {
             'priority': 1
         },
         {
-            'pattern': r'(?i)(?:from|seller|vendor|supplier|lieferant|fournisseur|fornecedor)[\s:]+(.+?)(?=\n|$|[A-Z][a-z]+\s*:)'
-        },    'type': 'str',
+            'pattern': r'(?i)(?:from|seller|vendor|supplier|lieferant|fournisseur|fornecedor)[\s:]+(.+?)(?=\n|$|[A-Z][a-z]+\s*:)',
+            'type': 'str',
             'confidence': 0.85,
             'description': 'Seller name after common labels'
         },
@@ -240,10 +240,10 @@ DEFAULT_RULES: Dict[str, Any] = {
             'priority': 1
         },
         {
-            'pattern': r'(?i)(?:total\s+amount|total|summe|total\s+à\s+payer|importe\s+total|total\s+general)[\s:]*[$€£¥]?\s*([0-9]+[,\.]?[0-9]*)',
+            'pattern': r'(?i)(?:total\s+amount|total|summe|total\s+\u00e0\s+payer|importe\s+total|total\s+general)[\s:]*[$\u20ac\u00a3\u00a5]?\s*([0-9]+[,\.]?[0-9]*)',
             'type': 'currency',
-            'confidence': 0.95
-        },    'description': 'Total amount with optional currency'
+            'confidence': 0.95,
+            'description': 'Total amount with optional currency'
         },
         {
             'pattern': r'\bTOTAL\b[^\d]*([0-9]+[,.][0-9]{2})',
@@ -311,8 +311,8 @@ DEFAULT_RULES: Dict[str, Any] = {
                 {'name': 'quantity', 'type': 'float'},
                 {'name': 'unit_price', 'type': 'currency'}
             ],
-            'required': ['description', 'quantity', 'unit_price']
-        }    'confidence': 0.8,
+            'required': ['description', 'quantity', 'unit_price'],
+            'confidence': 0.8,
             'description': 'Simpler line items with description, quantity, unit price'
         }
     ],

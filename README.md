@@ -73,15 +73,36 @@ invocr serve --port 8001
 
 # Run batch processing
 invocr batch ./invoices/ ./output/ --format xml
+```
 
-invocr batch ./2024.09/attachments/ ./2024.09/attachments/json --format json
-invocr batch ./2024.09/attachments/ ./2024.09/attachments/ --format xml
-poetry run python pdf2json.py invoice.pdf --output invoice.json
-poetry run python process_pdfs.py --input-dir ./2024.09/attachments/ --output-dir ./2024.09/attachments/
-poetry run python process_pdfs.py --input-dir ./2024.10/attachments/ --output-dir ./2024.10/attachments/
-poetry run python process_pdfs.py --input-dir ./2024.11/attachments/ --output-dir ./2024.11/attachments/
-poetry run python debug_pdf.py /home/tom/github/fin-officer/invocr/2024.10/attachments/Receipt-2459-8027.pdf
+### Helper Scripts
 
+#### 1. Process Single PDF to JSON
+```bash
+# Convert a single PDF to JSON
+poetry run python pdf2json.py path/to/input.pdf --output path/to/output.json
+```
+
+#### 2. Batch Process Multiple PDFs
+```bash
+# Process all PDFs in a directory
+poetry run python process_pdfs.py --input-dir ./2024.09/attachments/ --output-dir ./2024.09/json/
+
+# Available options:
+# --input-dir: Directory containing PDF files (default: 2024.09/attachments)
+# --output-dir: Directory to save JSON files (default: 2024.09/json)
+# --log-level: Set logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+```
+
+#### 3. Debug PDF Extraction
+```bash
+# View extracted text from a PDF for debugging
+poetry run python debug_pdf.py path/to/document.pdf
+```
+
+### Advanced Usage
+
+```bash
 # Full PDF to HTML conversion pipeline (one step)
 invocr pipeline --input invoice.pdf --output ./output/invoice.html --start-format pdf --end-format html
 
@@ -90,6 +111,20 @@ invocr pdf2img --input invoice.pdf --output ./temp/invoice.png
 invocr img2json --input ./temp/invoice.png --output ./temp/invoice.json
 invocr json2xml --input ./temp/invoice.json --output ./temp/invoice.xml
 invocr pipeline --input ./temp/invoice.xml --output ./output/invoice.html --start-format xml --end-format html
+```
+
+### Directory Structure
+
+For batch processing, the following directory structure is recommended:
+```
+./
+├── 2024.09/
+│   ├── attachments/    # Put your PDF files here
+│   └── json/          # JSON output will be saved here
+├── 2024.10/
+│   ├── attachments/
+│   └── json/
+└── ...
 ```
 
 ### Using the API

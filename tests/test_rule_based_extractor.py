@@ -14,7 +14,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from invocr.formats.pdf.rule_based_extractor import RuleBasedExtractor
-from invocr.formats.pdf.document_models import Invoice, Party, Address, InvoiceItem, PaymentTerms
+from invocr.formats.pdf.document import Invoice, Party, Address, InvoiceItem, PaymentTerms
 
 def create_sample_extractor():
     """Create a sample rule-based extractor for testing."""
