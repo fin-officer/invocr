@@ -52,7 +52,7 @@
 
 ```bash
 # Convert PDF to JSON
-invocr convert invoice.pdf output.json
+invocr convert invoice.pdf invoice.json
 
 # Process image with specific languages
 invocr img2json receipt.jpg --languages en,pl,de

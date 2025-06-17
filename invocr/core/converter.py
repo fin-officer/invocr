@@ -8,7 +8,7 @@ import tempfile
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
-from ..core.extractor import DataExtractor
+from ..core.extractor import create_extractor
 from ..core.ocr import create_ocr_engine
 from ..formats.html_handler import HTMLHandler
 from ..formats.image import ImageProcessor
@@ -28,7 +28,7 @@ class UniversalConverter:
     def __init__(self, languages: List[str] = None):
         self.languages = languages or ["en", "pl", "de", "fr", "es"]
         self.ocr_engine = create_ocr_engine(self.languages)
-        self.extractor = DataExtractor(self.languages)
+        self.extractor = create_extractor(self.languages)
 
         # Initialize format handlers
         self.pdf_processor = PDFProcessor()

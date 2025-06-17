@@ -514,11 +514,30 @@ class DataExtractor:
 def create_extractor(languages: List[str] = None) -> DataExtractor:
     """
     Factory function to create data extractor instance.
+    Dynamically selects the appropriate language-specific extractor.
 
     Args:
         languages (List[str], optional): List of languages to support. Defaults to None.
 
     Returns:
-        DataExtractor: Data extractor instance.
+        DataExtractor: Data extractor instance (language-specific).
     """
-    return DataExtractor(languages)
+    # Import language-specific extractors from the extractors package
+    from extractors.en.extractor import EnglishExtractor
+    from extractors.pl.extractor import PolishExtractor
+    from extractors.de.extractor import GermanExtractor
+    
+    # Default to English if no languages specified
+    if not languages:
+        languages = ["en"]
+    
+    # Select extractor based on primary language
+    primary_lang = languages[0].lower()
+    
+    if primary_lang == "pl":
+        return PolishExtractor(languages)
+    elif primary_lang == "de":
+        return GermanExtractor(languages)
+    else:
+        # Default to English extractor for all other languages
+        return EnglishExtractor(languages)
