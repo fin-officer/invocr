@@ -46,6 +46,13 @@
 | **Bank Statements** | Account statements | Transactions, balances |
 | **Custom** | Any document | Configurable templates |
 
+## 📚 Documentation
+
+- [Examples](./docs/examples.md) - Comprehensive usage examples
+- [API Reference](./docs/api.md) - Detailed API documentation
+- [CLI Reference](./docs/cli.md) - Command-line interface documentation
+- [Validation Examples](./docs/examples/validation_examples.md) - PDF validation usage
+
 ## 🛠️ Basic Usage
 
 ### Using the CLI

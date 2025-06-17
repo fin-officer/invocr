@@ -8,6 +8,9 @@ import logging
 import tempfile
 from pathlib import Path
 
+# Add the parent directory to the Python path to ensure invocr can be imported
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+
 # Suppress invoice2data logging errors
 logging.basicConfig(level=logging.ERROR)
 

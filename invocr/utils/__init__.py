@@ -21,6 +21,11 @@ from .helpers import (
     normalize_text,
     parse_currency_amount,
     retry_on_failure,
+)
+
+from .validation import (
+    is_valid_pdf, 
+    is_valid_pdf_simple,
     safe_json_dumps,
     safe_json_loads,
     sanitize_input,

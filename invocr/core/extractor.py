@@ -523,9 +523,9 @@ def create_extractor(languages: List[str] = None) -> DataExtractor:
         DataExtractor: Data extractor instance (language-specific).
     """
     # Import language-specific extractors from the extractors package
-    from extractors.en.extractor import EnglishExtractor
-    from extractors.pl.extractor import PolishExtractor
-    from extractors.de.extractor import GermanExtractor
+    from invocr.extractors.en.extractor import EnglishExtractor
+    from invocr.extractors.pl.extractor import PolishExtractor
+    from invocr.extractors.de.extractor import GermanExtractor
     
     # Default to English if no languages specified
     if not languages:
