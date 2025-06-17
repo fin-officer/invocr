@@ -11,7 +11,7 @@ from typing import Dict, List, Optional, Tuple, Union, Any
 
 import fitz  # PyMuPDF
 
-from ..models import Document, Page, Block, Line, Word, BBox
+from .document_models import Document, Page, Block, Line, Word, BBox
 from .models import Invoice, InvoiceItem, InvoiceTotals
 from .extractor import extract_invoice_data
 from .converter import (
