@@ -189,28 +189,41 @@ def parse_date(date_str: str, reference_date: Optional[date] = None, is_relative
         try:
             parsed_date = datetime.strptime(date_str, fmt).date()
             
-            # For 2-digit years, adjust the century based on current date
+                    # Handle 2-digit years by determining the correct century
             current_year = datetime.now().year
             current_century = current_year // 100 * 100
             parsed_year = parsed_date.year
             
-            # If the year is less than 100, it's a 2-digit year
             if parsed_year < 100:
-                # For 2-digit years, we need to determine the century
-                # Use a sliding window of 80 years (current year - 80 to current year + 20)
-                # to determine the most likely century
+                # For 2-digit years, use a pivot year to determine the century
+                # Current pivot is set to 30 years from now (handles dates up to 30 years in the future)
+                pivot_year = current_year % 100
                 
-                # Calculate the year in current century
-                year_in_current_century = current_century + parsed_year
-                
-                # If the calculated year is more than 20 years in the future,
-                # it's probably from the previous century
-                if year_in_current_century > current_year + 20:
-                    parsed_date = parsed_date.replace(year=year_in_current_century - 100)
+                # If the 2-digit year is <= pivot_year, it's in the current century
+                # If it's > pivot_year, it's in the previous century
+                if parsed_year <= pivot_year:
+                    parsed_date = parsed_date.replace(year=current_century + parsed_year)
                 else:
-                    parsed_date = parsed_date.replace(year=year_in_current_century)
-                    
+                    parsed_date = parsed_date.replace(year=current_century - 100 + parsed_year)
+                
                 logger.debug(f"Converted 2-digit year {parsed_year} to {parsed_date.year}")
+            
+            # For years in the future (full 4-digit years), ensure they're reasonable
+            elif parsed_year > current_year + 30:
+                logger.debug(f"Year {parsed_year} is too far in the future, adjusting")
+                # If the year is too far in the future, assume it's a typo or wrong format
+                # For example, if someone entered MM/DD/YYYY but it was parsed as YYYY/MM/DD
+                # Try to swap day and month if that makes more sense
+                if 1 <= parsed_date.month <= 12 and 1 <= parsed_date.day <= 31:
+                    day = parsed_date.day
+                    month = parsed_date.month
+                    if day <= 12:  # Could be ambiguous
+                        # Try swapping day and month
+                        try:
+                            parsed_date = parsed_date.replace(day=month, month=day, year=parsed_year)
+                            logger.debug(f"Swapped day and month to {parsed_date}")
+                        except ValueError:
+                            pass
             
             return parsed_date.strftime("%Y-%m-%d")
             
@@ -375,7 +388,7 @@ def extract_date(text: str, date_type: str = "issue", reference_date: Optional[U
             # Handle relative dates (e.g., "30", "Net 30", "30 days")
             if is_due_date and reference_date is not None:
                 # Extract number of days from relative terms like "Net 30" or "30 days"
-                relative_match = re.match(r'(?:net\s+|in\s+)?(\d+)\s*(?:days?|d)?', date_str.lower())
+                relative_match = re.match(r'(?:net\s*|in\s*)?(\d+)\s*(?:days?|d)?\b', date_str.lower())
                 if relative_match:
                     try:
                         days = int(relative_match.group(1))
@@ -385,7 +398,8 @@ def extract_date(text: str, date_type: str = "issue", reference_date: Optional[U
                         else:
                             ref_date = reference_date.date() if isinstance(reference_date, datetime) else reference_date
                         
-                        # Calculate due date (subtract 1 day since "Net 30" typically means 30 days after invoice date)
+                        # Calculate due date (Net 30 means 30 days from the invoice date)
+                        # We add (days - 1) because the invoice date is typically day 1
                         due_date = ref_date + timedelta(days=days)
                         logger.debug(f"Calculated due date {due_date} from reference date {ref_date} + {days} days")
                         return due_date.strftime("%Y-%m-%d")
