@@ -148,7 +148,10 @@ class UniversalConverter:
 
             if text_data and len(text_data.strip()) > 50:
                 # Direct text extraction successful
-                structured_data = self.extractor.extract_invoice_data(
+                detected_lang = self.extractor._detect_language(text_data)
+                logger.info(f"[UniversalConverter] Detected language from PDF text: {detected_lang}")
+                extractor = create_extractor([detected_lang] + [l for l in self.languages if l != detected_lang])
+                structured_data = extractor.extract_invoice_data(
                     text_data, document_type
                 )
                 structured_data["_metadata"] = {
@@ -181,10 +184,12 @@ class UniversalConverter:
                         ocr_result = self.ocr_engine.extract_text(img_path)
                         combined_text += ocr_result["text"] + "\n"
                         total_confidence += ocr_result["confidence"]
+                    avg_confidence = total_confidence / min(len(images), 3)
 
-                    avg_confidence = total_confidence / len(images[:3])
-
-                    structured_data = self.extractor.extract_invoice_data(
+                    detected_lang = self.extractor._detect_language(combined_text)
+                    logger.info(f"[UniversalConverter] Detected language from OCR text: {detected_lang}")
+                    extractor = create_extractor([detected_lang] + [l for l in self.languages if l != detected_lang])
+                    structured_data = extractor.extract_invoice_data(
                         combined_text, document_type
                     )
                     structured_data["_metadata"] = {

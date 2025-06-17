@@ -151,87 +151,22 @@ class DataExtractor:
         Returns:
             Detected language code (e.g., 'en', 'pl')
         """
-        # Simple implementation - can be enhanced with more sophisticated detection
-        if any(word in text.lower() for word in ["faktura", "nip", "sprzedawca"]):
+        # Strong Softreck/Polish invoice detector
+        text_lower = text.lower()
+        if (
+            "softreck" in text_lower or
+            "faktura" in text_lower or
+            "nip" in text_lower or
+            "sprzedawca" in text_lower or
+            "klient" in text_lower or
+            "polska" in text_lower or
+            "vat:" in text_lower or
+            "reverse charge" in text_lower or
+            "pln" in text_lower
+        ):
             return "pl"
+        # Fallback to existing detection
         return "en"
-
-        # Extraction patterns are now loaded from modular extractors (en, pl, de). Legacy pattern dictionaries and this method have been removed.
-        # See extractors/en/extractor.py, extractors/pl/extractor.py, extractors/de/extractor.py for current implementations.
-
-        data["totals"] = self._extract_totals(text, detected_lang)
-
-        # Extract payment information
-        data.update(self._extract_payment_info(text, detected_lang))
-
-        # Validate and clean data
-        self._validate_and_clean(data)
-
-        # Add metadata
-        data["_metadata"] = {
-            "document_type": document_type,
-            "detected_language": detected_lang,
-            "extraction_timestamp": datetime.now().isoformat(),
-            "text_length": len(text),
-            "confidence": self._calculate_confidence(data, text),
-        }
-
-        return data
-
-    def _get_document_template(self, doc_type: str) -> Dict[str, any]:
-        """Get base template for different document types"""
-        templates = {
-            "invoice": {
-                "document_number": "",
-                "document_date": "",
-                "due_date": "",
-                "seller": {
-                    "name": "",
-                    "address": "",
-                    "tax_id": "",
-                    "phone": "",
-                    "email": "",
-                },
-                "buyer": {
-                    "name": "",
-                    "address": "",
-                    "tax_id": "",
-                    "phone": "",
-                    "email": "",
-                },
-                "items": [],
-                "totals": {
-                    "subtotal": 0.0,
-                    "tax_rate": 0.0,
-                    "tax_amount": 0.0,
-                    "total": 0.0,
-                },
-                "payment_method": "",
-                "bank_account": "",
-                "notes": "",
-            },
-            "receipt": {
-                "receipt_number": "",
-                "date": "",
-                "time": "",
-                "merchant": {"name": "", "address": "", "phone": ""},
-                "items": [],
-                "totals": {"subtotal": 0.0, "tax": 0.0, "total": 0.0},
-                "payment_method": "",
-                "card_info": "",
-            },
-            "payment": {
-                "transaction_id": "",
-                "date": "",
-                "payer": {"name": "", "account": ""},
-                "payee": {"name": "", "account": ""},
-                "amount": 0.0,
-                "currency": "",
-                "description": "",
-                "reference": "",
-            },
-        }
-        return templates.get(doc_type, templates["invoice"])
 
     def _extract_basic_info(self, text: str, language: str) -> Dict[str, str]:
         """Extract basic document information"""
@@ -411,39 +346,6 @@ class DataExtractor:
 
         return result
 
-    def _detect_language(self, text: str) -> str:
-        """Simple language detection"""
-        # Check for language-specific characters and words
-        lang_indicators = {
-            "pl": [
-                "ą",
-                "ć",
-                "ę",
-                "ł",
-                "ń",
-                "ó",
-                "ś",
-                "ź",
-                "ż",
-                "faktura",
-                "sprzedawca",
-            ],
-            "de": ["ä", "ö", "ü", "ß", "rechnung", "verkäufer"],
-            "fr": ["à", "â", "é", "è", "ê", "facture", "vendeur"],
-            "es": ["ñ", "á", "é", "í", "ó", "ú", "factura", "vendedor"],
-            "it": ["à", "è", "ì", "ò", "ù", "fattura", "venditore"],
-        }
-
-        text_lower = text.lower()
-        scores = {}
-
-        for lang, indicators in lang_indicators.items():
-            score = sum(1 for indicator in indicators if indicator in text_lower)
-            scores[lang] = score
-
-        detected = max(scores.keys(), key=lambda k: scores[k]) if scores else "en"
-        return detected if scores[detected] > 0 else "en"
-
     def _validate_and_clean(self, data: Dict) -> None:
         """Validate and clean extracted data"""
         # Clean numeric values
@@ -538,13 +440,17 @@ def create_extractor(languages: List[str] = None) -> DataExtractor:
     primary_lang = languages[0].lower()
 
     if primary_lang == "pl":
+        logger.info(f"[ExtractorFactory] Using PolishExtractor for languages={languages}")
         return PolishExtractor(languages)
     elif primary_lang == "de":
+        logger.info(f"[ExtractorFactory] Using GermanExtractor for languages={languages}")
         return GermanExtractor(languages)
     elif primary_lang == "es":
+        logger.info(f"[ExtractorFactory] Using SpanishExtractor for languages={languages}")
         return SpanishExtractor(languages)
     elif primary_lang == "fr":
+        logger.info(f"[ExtractorFactory] Using FrenchExtractor for languages={languages}")
         return FrenchExtractor(languages)
     else:
-        # Default to English extractor for all other languages
+        logger.info(f"[ExtractorFactory] Using EnglishExtractor for languages={languages}")
         return EnglishExtractor(languages)
