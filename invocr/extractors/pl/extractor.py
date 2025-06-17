@@ -369,63 +369,63 @@ class PolishExtractor(DataExtractor):
             text
         )
     
-    if not total_match:
-        # Look for any amount that looks like a total
-        total_match = re.search(
-            r'(?i)(?:kwota\s+łączna\s+faktur[^\d]*|razem\s+do\s+zapłaty\s*:?\s*)(?:[A-Z]{3})?\s*([\d\s,]+(?:\.[\d\s]+)?)',
+        if not total_match:
+            # Look for any amount that looks like a total
+            total_match = re.search(
+                r'(?i)(?:kwota\s+łączna\s+faktur[^\d]*|razem\s+do\s+zapłaty\s*:?\s*)(?:[A-Z]{3})?\s*([\d\s,]+(?:\.[\d\s]+)?)',
+                text
+            )
+    
+        if total_match:
+            try:
+                # Clean up the number and convert to float
+                total_amount = float(re.sub(r'[^\d,]', '', total_match.group(1).replace(',', '.')))
+                result["totals"]["total"] = total_amount
+                result["totals"]["currency"] = "PLN"  # Default to PLN for this invoice
+                result["total"] = total_amount  # For backward compatibility
+                result["currency"] = "PLN"  # For backward compatibility
+                self.logger.info(f"Extracted total amount: {total_amount} PLN")
+            except (ValueError, AttributeError) as e:
+                self.logger.warning(f"Could not parse total amount: {e}")
+        else:
+            self.logger.warning("Total amount not found")
+    
+        # Try to extract subtotal and tax amount if available
+        subtotal_match = re.search(
+            r'(?i)Suma\s+bez\s+VAT\s+0%\s+([\d\s,]+(?:\.[\d\s]+)?)',
             text
         )
     
-    if total_match:
-        try:
-            # Clean up the number and convert to float
-            total_amount = float(re.sub(r'[^\d,]', '', total_match.group(1).replace(',', '.')))
-            result["totals"]["total"] = total_amount
-            result["totals"]["currency"] = "PLN"  # Default to PLN for this invoice
-            result["total"] = total_amount  # For backward compatibility
-            result["currency"] = "PLN"  # For backward compatibility
-            self.logger.info(f"Extracted total amount: {total_amount} PLN")
-        except (ValueError, AttributeError) as e:
-            self.logger.warning(f"Could not parse total amount: {e}")
-    else:
-        self.logger.warning("Total amount not found")
+        tax_match = re.search(
+            r'(?i)VAT\s+0%\s+([\d\s,]+(?:\.[\d\s]+)?)',
+            text
+        )
     
-    # Try to extract subtotal and tax amount if available
-    subtotal_match = re.search(
-        r'(?i)Suma\s+bez\s+VAT\s+0%\s+([\d\s,]+(?:\.[\d\s]+)?)',
-        text
-    )
+        if subtotal_match:
+            try:
+                subtotal = float(re.sub(r'[^\d,]', '', subtotal_match.group(1).replace(',', '.')))
+                result["totals"]["subtotal"] = subtotal
+                self.logger.info(f"Extracted subtotal: {subtotal}")
+            except (ValueError, AttributeError) as e:
+                self.logger.warning(f"Could not parse subtotal amount: {e}")
     
-    tax_match = re.search(
-        r'(?i)VAT\s+0%\s+([\d\s,]+(?:\.[\d\s]+)?)',
-        text
-    )
+        if tax_match:
+            try:
+                tax_amount = float(re.sub(r'[^\d,]', '', tax_match.group(1).replace(',', '.')))
+                result["totals"]["tax_amount"] = tax_amount
+                result["tax_amount"] = tax_amount  # For backward compatibility
+                self.logger.info(f"Extracted tax amount: {tax_amount}")
+            except (ValueError, AttributeError) as e:
+                self.logger.warning(f"Could not parse tax amount: {e}")
     
-    if subtotal_match:
-        try:
-            subtotal = float(re.sub(r'[^\d,]', '', subtotal_match.group(1).replace(',', '.')))
-            result["totals"]["subtotal"] = subtotal
-            self.logger.info(f"Extracted subtotal: {subtotal}")
-        except (ValueError, AttributeError) as e:
-            self.logger.warning(f"Could not parse subtotal amount: {e}")
+        # If we have a total but no subtotal, use the total as subtotal (for 0% VAT)
+        if "total" in result.get("totals", {}) and "subtotal" not in result.get("totals", {}):
+            result["totals"]["subtotal"] = result["totals"]["total"]
+            result["totals"]["tax_amount"] = 0.0
+            result["tax_amount"] = 0.0  # For backward compatibility
+            self.logger.info("Using total as subtotal (0% VAT)")
     
-    if tax_match:
-        try:
-            tax_amount = float(re.sub(r'[^\d,]', '', tax_match.group(1).replace(',', '.')))
-            result["totals"]["tax_amount"] = tax_amount
-            result["tax_amount"] = tax_amount  # For backward compatibility
-            self.logger.info(f"Extracted tax amount: {tax_amount}")
-        except (ValueError, AttributeError) as e:
-            self.logger.warning(f"Could not parse tax amount: {e}")
-    
-    # If we have a total but no subtotal, use the total as subtotal (for 0% VAT)
-    if "total" in result.get("totals", {}) and "subtotal" not in result.get("totals", {}):
-        result["totals"]["subtotal"] = result["totals"]["total"]
-        result["totals"]["tax_amount"] = 0.0
-        result["tax_amount"] = 0.0  # For backward compatibility
-        self.logger.info("Using total as subtotal (0% VAT)")
-    
-    return result
+        return result
 
     def _parse_date(self, date_str: str) -> str:
         """Parse date string in the format DD.MM.YYYY."""
