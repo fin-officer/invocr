@@ -10,6 +10,7 @@ from .converter import (
 )
 from .extractor import DataExtractor, create_extractor
 from .ocr import OCREngine, create_ocr_engine
+from .pdf_processor import PDFProcessor
 
 __all__ = [
     "UniversalConverter",
@@ -20,4 +21,5 @@ __all__ = [
     "create_extractor",
     "OCREngine",
     "create_ocr_engine",
+    "PDFProcessor"
 ]
