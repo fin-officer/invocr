@@ -1,12 +1,8 @@
-# This is a stub module for French extractors
-# Actual implementation should be provided by the application
+"""
+French language extractor implementation.
+This module provides the FrenchExtractor class for processing French text.
+"""
 
-class FrenchExtractor:
-    """Stub for French extractor implementation"""
-    
-    def __init__(self):
-        pass
-        
-    def extract(self, text: str) -> dict:
-        """Stub for extract method"""
-        return {}
+from .extractor import FrenchExtractor
+
+__all__ = ['FrenchExtractor']

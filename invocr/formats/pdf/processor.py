@@ -36,14 +36,14 @@ class PDFProcessor:
     and convert documents to various formats.
     """
     
-    def __init__(self, file_path: Union[str, Path]):
+    def __init__(self, file_path: Optional[Union[str, Path]] = None):
         """
-        Initialize the PDFProcessor with a PDF file.
+        Initialize the PDFProcessor with an optional PDF file.
         
         Args:
-            file_path: Path to the PDF file to process
+            file_path: Optional path to the PDF file to process
         """
-        self.file_path = Path(file_path) if isinstance(file_path, str) else file_path
+        self.file_path = Path(file_path) if file_path and isinstance(file_path, str) else file_path
         self.doc: Optional[fitz.Document] = None
         self._page_count: Optional[int] = None
         self._metadata: Optional[Dict[str, Any]] = None

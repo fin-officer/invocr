@@ -14,6 +14,14 @@ logger = logging.getLogger(__name__)
 class PDFProcessor:
     """Handles PDF processing operations including validation and text extraction."""
     
+    def __init__(self, file_path: Optional[str] = None):
+        """Initialize PDFProcessor with an optional file path.
+        
+        Args:
+            file_path: Optional path to a PDF file
+        """
+        self.file_path = file_path
+    
     @staticmethod
     def is_valid_pdf(pdf_path: str) -> Tuple[bool, Optional[str]]:
         """

@@ -6,8 +6,13 @@ This is a stub implementation for testing purposes.
 class SpanishExtractor:
     """Stub for Spanish extractor implementation"""
     
-    def __init__(self):
-        pass
+    def __init__(self, languages=None):
+        """Initialize the Spanish extractor with supported languages.
+        
+        Args:
+            languages: List of language codes this extractor supports (default: ['es'])
+        """
+        self.languages = languages or ['es']
         
     def extract(self, text: str) -> dict:
         """

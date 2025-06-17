@@ -1,12 +1,8 @@
-# This is a stub module for Polish extractors
-# Actual implementation should be provided by the application
+"""
+Polish language extractor implementation.
+This module provides the PolishExtractor class for processing Polish text.
+"""
 
-class PolishExtractor:
-    """Stub for Polish extractor implementation"""
-    
-    def __init__(self):
-        pass
-        
-    def extract(self, text: str) -> dict:
-        """Stub for extract method"""
-        return {}
+from .extractor import PolishExtractor
+
+__all__ = ['PolishExtractor']

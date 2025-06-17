@@ -1,12 +1,8 @@
-# This is a stub module for Spanish extractors
-# Actual implementation should be provided by the application
+"""
+Spanish language extractor implementation.
+This module provides the SpanishExtractor class for processing Spanish text.
+"""
 
-class SpanishExtractor:
-    """Stub for Spanish extractor implementation"""
-    
-    def __init__(self):
-        pass
-        
-    def extract(self, text: str) -> dict:
-        """Stub for extract method"""
-        return {}
+from .extractor import SpanishExtractor
+
+__all__ = ['SpanishExtractor']

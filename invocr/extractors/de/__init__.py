@@ -1,12 +1,8 @@
-# This is a stub module for German extractors
-# Actual implementation should be provided by the application
+"""
+German language extractor implementation.
+This module provides the GermanExtractor class for processing German text.
+"""
 
-class GermanExtractor:
-    """Stub for German extractor implementation"""
-    
-    def __init__(self):
-        pass
-        
-    def extract(self, text: str) -> dict:
-        """Stub for extract method"""
-        return {}
+from .extractor import GermanExtractor
+
+__all__ = ['GermanExtractor']

@@ -1,12 +1,8 @@
-# This is a stub module for English extractors
-# Actual implementation should be provided by the application
+"""
+English language extractor implementation.
+This module provides the EnglishExtractor class for processing English text.
+"""
 
-class EnglishExtractor:
-    """Stub for English extractor implementation"""
-    
-    def __init__(self):
-        pass
-        
-    def extract(self, text: str) -> dict:
-        """Stub for extract method"""
-        return {}
+from .extractor import EnglishExtractor
+
+__all__ = ['EnglishExtractor']

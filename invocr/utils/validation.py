@@ -131,7 +131,7 @@ def validate_file_extension(filename: str, allowed_extensions: set) -> Tuple[boo
         
     return True, None
 
-def is_valid_pdf(pdf_path: str, min_size: int = 100) -> Tuple[bool, Optional[str]]:
+def is_valid_pdf(pdf_path: str, min_size: int = 10) -> Tuple[bool, Optional[str]]:
     """
     Check if a file is a valid PDF.
 
