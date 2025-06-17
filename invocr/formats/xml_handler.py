@@ -105,9 +105,9 @@ class XMLHandler:
             ET.SubElement(seller_address, "CityName").text = (
                 address_parts[1] if len(address_parts) > 1 else ""
             )
-            ET.SubElement(seller_address, "CountryCode").text = (
-                "PL"  # Default to Poland
-            )
+            ET.SubElement(
+                seller_address, "CountryCode"
+            ).text = "PL"  # Default to Poland
 
         seller_contact = ET.SubElement(seller_elem, "Contact")
         ET.SubElement(seller_contact, "Telephone").text = seller.get("phone", "")

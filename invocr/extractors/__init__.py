@@ -15,17 +15,18 @@ Each language module provides an extractor class that implements the same interf
 making it easy to switch between languages while maintaining a consistent API.
 """
 
+from .de import GermanExtractor
+
 # Import extractors to make them available at the package level
 from .en import EnglishExtractor
-from .de import GermanExtractor
 from .es import SpanishExtractor
 from .fr import FrenchExtractor
 from .pl import PolishExtractor
 
 __all__ = [
-    'EnglishExtractor',
-    'GermanExtractor',
-    'SpanishExtractor',
-    'FrenchExtractor',
-    'PolishExtractor',
+    "EnglishExtractor",
+    "GermanExtractor",
+    "SpanishExtractor",
+    "FrenchExtractor",
+    "PolishExtractor",
 ]

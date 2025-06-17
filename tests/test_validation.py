@@ -2,20 +2,23 @@
 Tests for the validation utilities.
 """
 
-import os
-import pytest
-import json
 import decimal
+import json
+import os
 from datetime import date, datetime
 from pathlib import Path
+
+import pytest
+
 from invocr.utils.validation import (
+    is_valid_pdf,
+    is_valid_pdf_simple,
     safe_json_dumps,
     safe_json_loads,
     sanitize_input,
     validate_file_extension,
-    is_valid_pdf,
-    is_valid_pdf_simple
 )
+
 
 class TestSafeJsonSerialization:
     def test_serialize_datetime(self):
@@ -36,12 +39,13 @@ class TestSafeJsonSerialization:
         data = {
             "date": datetime(2023, 1, 1),
             "amount": decimal.Decimal("123.45"),
-            "text": "test"
+            "text": "test",
         }
         serialized = safe_json_dumps(data)
         deserialized = safe_json_loads(serialized)
         assert deserialized["text"] == "test"
         assert deserialized["amount"] == 123.45
+
 
 class TestSanitizeInput:
     def test_sanitize_string(self):
@@ -63,6 +67,7 @@ class TestSanitizeInput:
         test_input = "a" * 100
         with pytest.raises(ValueError):
             sanitize_input(test_input, max_length=50)
+
 
 class TestFileValidation:
     def test_validate_file_extension(self, tmp_path):
@@ -87,7 +92,7 @@ class TestFileValidation:
         pdf_path = tmp_path / "test.pdf"
         with open(pdf_path, "wb") as f:
             f.write(b"%PDF-1.4\n%\xE2\xE3\xCF\xD3\n1 0 obj\n<<>>\nendobj\n")
-        
+
         assert is_valid_pdf_simple(str(pdf_path)) is True
 
     def test_is_valid_pdf(self, tmp_path):
@@ -96,7 +101,7 @@ class TestFileValidation:
         pdf_path = tmp_path / "test.pdf"
         with open(pdf_path, "wb") as f:
             f.write(b"%PDF-1.4\n%\xE2\xE3\xCF\xD3\n1 0 obj\n<<>>\nendobj\n")
-        
+
         # Test valid PDF
         valid, msg = is_valid_pdf(str(pdf_path))
         assert valid is True

@@ -127,6 +127,12 @@ class PDFProcessor:
             image_paths = []
             for i, image in enumerate(images):
                 image_file = output_path / f"{pdf_name}_page_{i + 1}.{format}"
+                # Overwrite existing image file if present
+                if image_file.exists():
+                    try:
+                        image_file.unlink()
+                    except Exception as e:
+                        logger.warning(f"Could not remove existing image file {image_file}: {e}")
                 image.save(image_file, format.upper())
                 image_paths.append(str(image_file))
                 logger.debug(f"Created image: {image_file}")

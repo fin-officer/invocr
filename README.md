@@ -63,16 +63,16 @@
 
 ```bash
 # Convert PDF to JSON
-invocr convert invoice.pdf invoice.json
+poetry run invocr convert invoice.pdf invoice.json
 
 # Process image with specific languages
-invocr img2json receipt.jpg --languages en,pl,de
+poetry run invocr img2json receipt.jpg --languages en,pl,de
 
 # Start the API server (use --port 8001 if port 8000 is already in use)
-invocr serve --port 8001
+poetry run invocr serve --port 8001
 
 # Run batch processing
-invocr batch ./invoices/ ./output/ --format xml
+poetry run invocr batch ./invoices/ ./output/ --format xml
 ```
 
 ### Helper Scripts

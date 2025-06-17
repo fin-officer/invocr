@@ -29,7 +29,7 @@ def pdf_to_text(pdf_path: Union[str, Path]) -> str:
     """
     pdf_path = Path(pdf_path)
     text = ""
-    
+
     try:
         with pdfplumber.open(pdf_path) as pdf:
             for page in pdf.pages:
@@ -39,7 +39,7 @@ def pdf_to_text(pdf_path: Union[str, Path]) -> str:
     except Exception as e:
         logger.error(f"Error extracting text from PDF: {e}")
         return ""
-        
+
     return text
 
 
@@ -51,7 +51,7 @@ def pdf_to_images(
     page_numbers: Optional[List[int]] = None,
 ) -> List[Path]:
     """
-    Convert PDF pages to images
+    Convert PDF pages to images with robust error handling and race condition prevention.
 
     Args:
         pdf_path: Path to the PDF file
@@ -61,13 +61,23 @@ def pdf_to_images(
         page_numbers: Optional list of page numbers (0-based) to convert.
                     If None, converts all pages.
 
+
     Returns:
         List of paths to the generated images
     """
     pdf_path = Path(pdf_path)
     output_dir = Path(output_dir)
-    ensure_directory(output_dir)
     
+    # Create output directory with error handling for race conditions
+    try:
+        output_dir.mkdir(parents=True, exist_ok=True)
+    except FileExistsError:
+        # Directory was created by another process
+        pass
+    except Exception as e:
+        logger.error(f"Failed to create output directory {output_dir}: {e}")
+        return []
+
     try:
         # Convert PDF to images
         if page_numbers is not None:
@@ -76,7 +86,12 @@ def pdf_to_images(
             for page_num in page_numbers:
                 try:
                     # Convert specific page (1-based index)
-                    img = convert_from_path(pdf_path, dpi=dpi, first_page=page_num+1, last_page=page_num+1)
+                    img = convert_from_path(
+                        pdf_path,
+                        dpi=dpi,
+                        first_page=page_num + 1,
+                        last_page=page_num + 1,
+                    )
                     if img:
                         images.append(img[0])
                 except Exception as e:
@@ -84,19 +99,24 @@ def pdf_to_images(
         else:
             # Convert all pages
             images = convert_from_path(pdf_path, dpi=dpi)
-        
+
         # Save images
         image_paths = []
         for i, image in enumerate(images):
             # If we have specific page numbers, use them in the filename
             page_num = page_numbers[i] + 1 if page_numbers is not None else i + 1
             image_path = output_dir / f"{pdf_path.stem}_page_{page_num}.{format}"
+            # Overwrite existing file if present
+            if image_path.exists():
+                try:
+                    image_path.unlink()
+                except Exception as e:
+                    logger.warning(f"Failed to remove existing image file {image_path}: {e}")
             image.save(str(image_path), format.upper())
             image_paths.append(image_path)
-            
         return image_paths
     except Exception as e:
-        logger.error(f"Error converting PDF to images: {e}")
+        logger.error(f"Error converting PDF to images: {e}", exc_info=True)
         return []
 
 
@@ -111,7 +131,7 @@ def get_page_count(pdf_path: Union[str, Path]) -> int:
         Number of pages
     """
     pdf_path = Path(pdf_path)
-    
+
     try:
         with pdfplumber.open(pdf_path) as pdf:
             return len(pdf.pages)
@@ -132,7 +152,7 @@ def extract_tables(pdf_path: Union[str, Path]) -> List[List[List[str]]]:
     """
     pdf_path = Path(pdf_path)
     tables = []
-    
+
     try:
         with pdfplumber.open(pdf_path) as pdf:
             for page in pdf.pages:
@@ -141,6 +161,5 @@ def extract_tables(pdf_path: Union[str, Path]) -> List[List[List[str]]]:
                     tables.extend(page_tables)
     except Exception as e:
         logger.error(f"Error extracting tables from PDF: {e}")
-        
-    return tables
 
+    return tables

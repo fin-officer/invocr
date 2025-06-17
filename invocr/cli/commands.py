@@ -175,9 +175,7 @@ def img2json(image_file: str, output_file: str, languages: tuple, doc_type: str)
             console.print(
                 f"📊 Confidence: {metadata.get('ocr_confidence', 0) * 100:.1f}%"
             )
-            console.print(
-                f"🔤 Language: {metadata.get('detected_language', 'unknown')}"
-            )
+            console.print(f"🔤 Language: {metadata.get('detected_language', 'unknown')}")
             console.print(f"📋 Items found: {len(data.get('items', []))}")
 
         except Exception as e:
@@ -253,7 +251,9 @@ def batch(
     files = list(input_path.glob(pattern))
 
     if not files:
-        console.print(f"[yellow]⚠️  No files found matching pattern: {pattern}[/yellow]")
+        console.print(
+            f"[yellow]⚠️  No files found matching pattern: {pattern}[/yellow]"
+        )
         return
 
     console.print(f"📁 Found {len(files)} files to process")
@@ -334,7 +334,6 @@ def pipeline(input_file: str, output_dir: str, languages: tuple):
         TextColumn("[progress.description]{task.description}"),
         console=console,
     ) as progress:
-
         current_file = input_file
         json_data = None
 

@@ -38,29 +38,39 @@ class ValidationResult:
 
 class BaseValidator:
     """Base class for all validators"""
-    
+
     def __init__(self):
         """Initialize the base validator"""
         pass
-        
-    def _create_error(self, field: str, message: str, value: Any = None, 
-                     suggestion: Optional[str] = None) -> ValidationError:
+
+    def _create_error(
+        self,
+        field: str,
+        message: str,
+        value: Any = None,
+        suggestion: Optional[str] = None,
+    ) -> ValidationError:
         """Create a validation error"""
         return ValidationError(
             field=field,
             message=message,
             severity="error",
             value=value,
-            suggestion=suggestion
+            suggestion=suggestion,
         )
-        
-    def _create_warning(self, field: str, message: str, value: Any = None,
-                       suggestion: Optional[str] = None) -> ValidationError:
+
+    def _create_warning(
+        self,
+        field: str,
+        message: str,
+        value: Any = None,
+        suggestion: Optional[str] = None,
+    ) -> ValidationError:
         """Create a validation warning"""
         return ValidationError(
             field=field,
             message=message,
             severity="warning",
             value=value,
-            suggestion=suggestion
+            suggestion=suggestion,
         )

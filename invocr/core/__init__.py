@@ -21,5 +21,5 @@ __all__ = [
     "create_extractor",
     "OCREngine",
     "create_ocr_engine",
-    "PDFProcessor"
+    "PDFProcessor",
 ]

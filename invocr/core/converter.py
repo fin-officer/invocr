@@ -258,40 +258,79 @@ class UniversalConverter:
     def _save_data(
         self, data: Dict, file_path: Union[str, Path], format: str
     ) -> Dict[str, any]:
-        """Save data to file in specified format"""
-        path = Path(file_path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-
-        if format == "json":
-            with open(path, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-            return {"size": path.stat().st_size}
-
-        elif format == "xml":
-            xml_content = self.json_to_xml(data)
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(xml_content)
-            return {"size": path.stat().st_size, "format": "eu_invoice"}
-
-        elif format == "html":
-            html_content = self.json_to_html(data)
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(html_content)
-            return {"size": path.stat().st_size, "template": "modern"}
-
-        elif format == "pdf":
-            # First convert to HTML, then to PDF
-            html_content = self.json_to_html(data)
-            with tempfile.NamedTemporaryFile(
-                mode="w", suffix=".html", delete=False, encoding="utf-8"
-            ) as tmp:
-                tmp.write(html_content)
-                tmp.flush()
-                self.html_to_pdf(tmp.name, path)
-            return {"size": path.stat().st_size, "pages": 1}
-
-        else:
-            raise ValueError(f"Unsupported target format: {format}")
+        """Save data to file in specified format, handling temporary files safely.
+        
+        Args:
+            data: Data to save
+            file_path: Target file path
+            format: Output format (json, xml, html, pdf)
+            
+        Returns:
+            Dict with metadata about the saved file
+            
+        Raises:
+            ValueError: If the format is not supported
+            OSError: If there's an error writing the file
+        """
+        path = Path(file_path).resolve()
+        temp_path = None
+        
+        try:
+            # Create parent directories if they don't exist
+            path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Create a temporary file in the same directory as the target
+            # This ensures we're on the same filesystem
+            temp_path = path.parent / f".{path.name}.tmp"
+            
+            # Write to temporary file first
+            if format == "json":
+                with open(temp_path, "w", encoding="utf-8") as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
+                result = {"size": temp_path.stat().st_size}
+                
+            elif format == "xml":
+                xml_content = self.json_to_xml(data)
+                with open(temp_path, "w", encoding="utf-8") as f:
+                    f.write(xml_content)
+                result = {"size": temp_path.stat().st_size, "format": "eu_invoice"}
+                
+            elif format == "html":
+                html_content = self.json_to_html(data)
+                with open(temp_path, "w", encoding="utf-8") as f:
+                    f.write(html_content)
+                result = {"size": temp_path.stat().st_size, "template": "modern"}
+                
+            elif format == "pdf":
+                # For PDF, we need to generate HTML first, then convert to PDF
+                html_content = self.json_to_html(data)
+                with tempfile.NamedTemporaryFile(
+                    mode="w", suffix=".html", delete=False, encoding="utf-8"
+                ) as tmp_html:
+                    tmp_html.write(html_content)
+                    tmp_html.flush()
+                    # Write PDF to temp file first
+                    self.html_to_pdf(tmp_html.name, temp_path)
+                result = {"size": temp_path.stat().st_size, "pages": 1}
+                
+            else:
+                raise ValueError(f"Unsupported target format: {format}")
+            
+            # If we got here, the temp file was written successfully
+            # Now atomically replace the target file if it exists
+            if path.exists():
+                path.unlink()
+            temp_path.rename(path)
+            return result
+            
+        except Exception as e:
+            # Clean up temp file if it exists
+            if temp_path and temp_path.exists():
+                try:
+                    temp_path.unlink()
+                except Exception as cleanup_error:
+                    logger.warning(f"Failed to clean up temp file {temp_path}: {cleanup_error}")
+            raise  # Re-raise the original exception
 
 
 class BatchConverter:

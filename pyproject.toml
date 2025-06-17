@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "invocr"
-version = "1.0.14"
+version = "1.0.15"
 description = "Invoice OCR System - Convert invoices between PDF, JSON, XML, HTML formats using OCR"
 authors = ["Tom Sapletta <info@softreck.dev>"]
 license = "Apache"
