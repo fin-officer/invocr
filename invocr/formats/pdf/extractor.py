@@ -155,6 +155,7 @@ def parse_date(date_str: str, reference_date: Optional[date] = None, is_relative
         # Textual dates with day first (15 Nov 2023, 15-Nov-2023, etc.)
         "%d %b %Y", "%d-%b-%Y", "%d/%b/%Y", "%d.%b.%Y",
         "%d %B %Y", "%d-%B-%Y", "%d/%B/%Y", "%d.%B.%Y",
+        "%d %b, %Y", "%d %B, %Y",  # 15 Nov, 2023 or 15 November, 2023
         
         # Textual dates with month first (Nov 15, 2023, Nov-15-2023, etc.)
         "%b %d, %Y", "%b-%d-%Y", "%b/%d/%Y", "%b.%d.%Y",
@@ -163,11 +164,11 @@ def parse_date(date_str: str, reference_date: Optional[date] = None, is_relative
         # Day-Month-Year with various separators (European format) - prioritize DD/MM/YYYY
         "%d/%m/%Y", "%d-%m-%Y", "%d.%m.%Y", "%d %m %Y",
         
-        # Month-Day-Year with various separators (US format) - deprioritize MM/DD/YYYY
-        "%m/%d/%Y", "%m-%d-%Y", "%m.%d.%Y", "%m %d %Y",
-        
         # Day-Month-Year with 2-digit year (European format) - prioritize DD/MM/YY
         "%d/%m/%y", "%d-%m-%y", "%d.%m.%y", "%d %m %y",
+        
+        # Month-Day-Year with various separators (US format) - deprioritize MM/DD/YYYY
+        "%m/%d/%Y", "%m-%d-%Y", "%m.%d.%Y", "%m %d %Y",
         
         # Month-Day-Year with 2-digit year (US format) - deprioritize MM/DD/YY
         "%m/%d/%y", "%m-%d-%y", "%m.%d.%y", "%m %d %y",
@@ -175,8 +176,7 @@ def parse_date(date_str: str, reference_date: Optional[date] = None, is_relative
         # Textual dates with 2-digit years
         "%d %b %y", "%d-%b-%y", "%d/%b/%y", "%d.%b.%y",
         "%d %B %y", "%d-%B-%y", "%d/%B/%y", "%d.%B.%y",
-        "%b %d, %y", "%b-%d-%y", "%b/%d/%y", "%b.%d.%y",
-        "%B %d, %y", "%B-%d-%y", "%B/%d/%y", "%B.%d.%y",
+        "%d %b, %y", "%d %B, %y",  # 15 Nov, 23 or 15 November, 23
         
         # Special formats - try these last as they're more ambiguous
         "%d%m%Y", "%d%m%y",  # DDMMYYYY, DDMMYY
@@ -189,41 +189,44 @@ def parse_date(date_str: str, reference_date: Optional[date] = None, is_relative
         try:
             parsed_date = datetime.strptime(date_str, fmt).date()
             
-                    # Handle 2-digit years by determining the correct century
+                            # Get current date components for pivot year calculation
             current_year = datetime.now().year
-            current_century = current_year // 100 * 100
-            parsed_year = parsed_date.year
+            current_month = datetime.now().month
+            current_day = datetime.now().day
             
-            if parsed_year < 100:
-                # For 2-digit years, use a pivot year to determine the century
-                # Current pivot is set to 30 years from now (handles dates up to 30 years in the future)
-                pivot_year = current_year % 100
+            # Handle 2-digit years with a 30-year sliding window
+            if parsed_date.year < 100:
+                # Calculate pivot year (current year - 30)
+                pivot_year = (current_year - 30) % 100
+                century = current_year // 100 * 100
                 
-                # If the 2-digit year is <= pivot_year, it's in the current century
-                # If it's > pivot_year, it's in the previous century
-                if parsed_year <= pivot_year:
-                    parsed_date = parsed_date.replace(year=current_century + parsed_year)
+                # If the 2-digit year is <= current year % 100, it's in the current century
+                # Otherwise, it's in the previous century
+                if parsed_date.year <= current_year % 100:
+                    parsed_date = parsed_date.replace(year=century + parsed_date.year)
                 else:
-                    parsed_date = parsed_date.replace(year=current_century - 100 + parsed_year)
+                    parsed_date = parsed_date.replace(year=century - 100 + parsed_date.year)
                 
-                logger.debug(f"Converted 2-digit year {parsed_year} to {parsed_date.year}")
+                logger.debug(f"Converted 2-digit year {parsed_date.year % 100} to {parsed_date.year}")
             
-            # For years in the future (full 4-digit years), ensure they're reasonable
-            elif parsed_year > current_year + 30:
-                logger.debug(f"Year {parsed_year} is too far in the future, adjusting")
-                # If the year is too far in the future, assume it's a typo or wrong format
-                # For example, if someone entered MM/DD/YYYY but it was parsed as YYYY/MM/DD
-                # Try to swap day and month if that makes more sense
-                if 1 <= parsed_date.month <= 12 and 1 <= parsed_date.day <= 31:
-                    day = parsed_date.day
-                    month = parsed_date.month
-                    if day <= 12:  # Could be ambiguous
+            # Check if the date is in the future (more than 30 years from now)
+            # If so, it might be a format mismatch (e.g., MM/DD/YYYY vs DD/MM/YYYY)
+            if parsed_date.year > current_year + 30:
+                logger.debug(f"Year {parsed_date.year} is too far in the future, checking for format mismatch")
+                # Try swapping day and month if that results in a more reasonable date
+                if 1 <= parsed_date.month <= 12 and 1 <= parsed_date.day <= 12:  # Both could be month numbers
+                    try:
                         # Try swapping day and month
-                        try:
-                            parsed_date = parsed_date.replace(day=month, month=day, year=parsed_year)
+                        day = parsed_date.day
+                        month = parsed_date.month
+                        swapped_date = parsed_date.replace(day=month, month=day)
+                        
+                        # If the swapped date is more recent, use it
+                        if swapped_date.year <= current_year + 30:
+                            parsed_date = swapped_date
                             logger.debug(f"Swapped day and month to {parsed_date}")
-                        except ValueError:
-                            pass
+                    except ValueError:
+                        pass
             
             return parsed_date.strftime("%Y-%m-%d")
             
