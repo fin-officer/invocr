@@ -186,6 +186,8 @@ class UniversalConverter:
                         total_confidence += ocr_result["confidence"]
                     avg_confidence = total_confidence / min(len(images), 3)
 
+                    logger.info(f"[UniversalConverter] OCR combined text (first 1000 chars):\n{combined_text[:1000]}")
+
                     detected_lang = self.extractor._detect_language(combined_text)
                     logger.info(f"[UniversalConverter] Detected language from OCR text: {detected_lang}")
                     extractor = create_extractor([detected_lang] + [l for l in self.languages if l != detected_lang])

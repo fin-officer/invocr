@@ -416,7 +416,9 @@ class EnglishExtractor(DataExtractor):
 
     def _detect_language(self, text: str) -> str:
         """Detect the language of the text."""
-        return "en"
+        # Use the base DataExtractor logic for language detection (with logging)
+        from invocr.core.extractor import DataExtractor
+        return DataExtractor._detect_language(self, text)
 
     def extract_invoice_data(self, text: str, document_type: str = "invoice") -> dict:
         language = self._detect_language(text)

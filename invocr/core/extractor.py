@@ -151,8 +151,8 @@ class DataExtractor:
         Returns:
             Detected language code (e.g., 'en', 'pl')
         """
-        # Strong Softreck/Polish invoice detector
         text_lower = text.lower()
+        logger.info(f"[DataExtractor] Language detection input (first 500 chars): {text_lower[:500]}")
         if (
             "softreck" in text_lower or
             "faktura" in text_lower or
@@ -164,8 +164,9 @@ class DataExtractor:
             "reverse charge" in text_lower or
             "pln" in text_lower
         ):
+            logger.info("[DataExtractor] Detected language: pl")
             return "pl"
-        # Fallback to existing detection
+        logger.info("[DataExtractor] Detected language: en")
         return "en"
 
     def _extract_basic_info(self, text: str, language: str) -> Dict[str, str]:
