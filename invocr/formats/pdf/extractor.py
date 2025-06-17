@@ -123,11 +123,59 @@ def parse_date(date_str: str, reference_date: Optional[date] = None, is_relative
     # Clean up the date string
     date_str = date_str.strip()
     
+    # Handle empty or whitespace-only strings
+    if not date_str:
+        return None
+        
+    # Handle compact numeric dates (e.g., 15102023, 151023)
+    if re.match(r'^\d{6,8}$', date_str):
+        try:
+            if len(date_str) == 8:  # DDMMYYYY or YYYYMMDD
+                # Try DDMMYYYY first (European format)
+                try:
+                    day = int(date_str[:2])
+                    month = int(date_str[2:4])
+                    year = int(date_str[4:])
+                    if 1 <= month <= 12 and 1 <= day <= 31:
+                        if year < 100:  # 2-digit year
+                            current_year = datetime.now().year
+                            century = current_year // 100 * 100
+                            year += century if year <= current_year % 100 + 20 else century - 100
+                        parsed_date = datetime(year, month, day).date()
+                        return parsed_date.strftime("%Y-%m-%d")
+                except (ValueError, AttributeError):
+                    pass
+                    
+                # Try YYYYMMDD
+                try:
+                    year = int(date_str[:4])
+                    month = int(date_str[4:6])
+                    day = int(date_str[6:])
+                    if 1 <= month <= 12 and 1 <= day <= 31:
+                        return datetime(year, month, day).strftime("%Y-%m-%d")
+                except (ValueError, AttributeError):
+                    pass
+                    
+            elif len(date_str) == 6:  # DDMMYY
+                try:
+                    day = int(date_str[:2])
+                    month = int(date_str[2:4])
+                    year = int(date_str[4:])
+                    if 1 <= month <= 12 and 1 <= day <= 31:
+                        current_year = datetime.now().year
+                        century = current_year // 100 * 100
+                        year += century if year <= current_year % 100 + 20 else century - 100
+                        return datetime(year, month, day).strftime("%Y-%m-%d")
+                except (ValueError, AttributeError):
+                    pass
+        except Exception as e:
+            logger.debug(f"Error parsing compact date {date_str}: {e}")
+    
     # Handle relative dates (e.g., "30" or "in 30 days")
     if is_relative and reference_date is not None:
         try:
-            # Extract just the number if there's any text
-            match = re.match(r'(?:in\s+)?(\d+)\s*(?:days?|d)?', date_str, re.IGNORECASE)
+            # Extract the number of days from various relative formats
+            match = re.match(r'(?:net\s*|in\s*|terms?\s*:?\s*)(\d+)\s*(?:days?|d)?\b', date_str, re.IGNORECASE)
             if match:
                 days = int(match.group(1))
                 # Ensure reference_date is a date object
@@ -135,7 +183,10 @@ def parse_date(date_str: str, reference_date: Optional[date] = None, is_relative
                     ref_date = datetime.strptime(reference_date, "%Y-%m-%d").date()
                 else:
                     ref_date = reference_date.date() if isinstance(reference_date, datetime) else reference_date
+                # Calculate due date (Net 30 means 30 days total, starting from the reference date)
+                # For example, if reference date is Oct 15, Net 30 would be Nov 14 (30 days total)
                 result_date = ref_date + timedelta(days=days)
+                logger.debug(f"Relative date calculation: {ref_date} + {days} days = {result_date}")
                 return result_date.strftime("%Y-%m-%d")
         except (ValueError, AttributeError) as e:
             logger.debug(f"Error parsing relative date: {e}")
@@ -144,13 +195,76 @@ def parse_date(date_str: str, reference_date: Optional[date] = None, is_relative
     # Remove ordinal indicators (1st, 2nd, 3rd, 4th, etc.)
     date_str = re.sub(r'(\d+)(st|nd|rd|th)', r'\1', date_str)
     
+    # Handle YY-MM-DD format first (e.g., 23-10-15)
+    if re.match(r'^\d{2}-\d{1,2}-\d{1,2}$', date_str):
+        try:
+            year, month, day = map(int, date_str.split('-'))
+            # Apply pivot year logic for 2-digit years
+            current_year = datetime.now().year
+            current_century = (current_year // 100) * 100
+            current_short_year = current_year % 100
+            
+            if year <= current_short_year + 20:
+                year += current_century
+            else:
+                year += current_century - 100
+                
+            if 1 <= month <= 12 and 1 <= day <= 31:
+                return datetime(year, month, day).strftime("%Y-%m-%d")
+        except (ValueError, AttributeError) as e:
+            logger.debug(f"Error parsing YY-MM-DD date {date_str}: {e}")
+    
+    # Handle other 2-digit year formats (DD/MM/YY or MM/DD/YY)
+    if re.match(r'^\d{1,2}[-/.]\d{1,2}[-/.]\d{2}$', date_str):
+        # For DD/MM/YY or MM/DD/YY formats
+        parts = re.split(r'[-/.]', date_str)
+        if len(parts) == 3:
+            day, month, year = parts
+            try:
+                # Get current year and century info
+                current_year = datetime.now().year
+                current_century = (current_year // 100) * 100
+                current_short_year = current_year % 100
+                
+                # Parse the 2-digit year
+                year_int = int(year)
+                
+                # Apply pivot year logic: if year is within 20 years of current year, use current century
+                # Otherwise, use previous century
+                if year_int <= current_short_year + 20:
+                    year_int += current_century
+                else:
+                    year_int += current_century - 100
+                
+                # Try DD/MM/YYYY format first (European)
+                try:
+                    day_int = int(day)
+                    month_int = int(month)
+                    if 1 <= month_int <= 12 and 1 <= day_int <= 31:
+                        return datetime(year_int, month_int, day_int).strftime("%Y-%m-%d")
+                except (ValueError, AttributeError):
+                    pass
+                    
+                # Then try MM/DD/YYYY format (US)
+                try:
+                    day_int = int(month)  # Swap day and month
+                    month_int = int(day)   # for US format
+                    if 1 <= month_int <= 12 and 1 <= day_int <= 31:
+                        return datetime(year_int, month_int, day_int).strftime("%Y-%m-%d")
+                except (ValueError, AttributeError):
+                    pass
+                    
+            except (ValueError, AttributeError) as e:
+                logger.debug(f"Error parsing 2-digit year date {date_str}: {e}")
+    
     # Try parsing with various date formats - ordered by most specific to least specific
     date_formats = [
         # ISO format (YYYY-MM-DD) - most reliable
         "%Y-%m-%d", "%Y/%m/%d", "%Y.%m.%d", "%Y %m %d",
         
         # ISO format with 2-digit year (YY-MM-DD) - handle this specially with pivot year logic
-        "%y-%m-%d", "%y/%m/%d", "%y.%m.%d", "%y %m %d",
+        "%y-%m-%d",  # YY-MM-DD format (e.g., 23-10-15 -> 2023-10-15)
+        "%y/%m/%d", "%y.%m.%d", "%y %m %d",
         
         # Textual dates with day first (15 Nov 2023, 15-Nov-2023, etc.)
         "%d %b %Y", "%d-%b-%Y", "%d/%b/%Y", "%d.%b.%Y",
@@ -369,7 +483,31 @@ def extract_date(text: str, date_type: str = "issue", reference_date: Optional[U
                 logger.debug(f"Error parsing issue date '{issue_date_str}': {e}")
                 pass
                 
-    # First, try to find a date using the patterns
+    # First, check for relative date patterns in the entire text if this is a due date
+    if is_due_date and reference_date is not None:
+        # Look for relative date patterns in the entire text
+        relative_pattern = r'(?:payment\s+terms|terms|net|due\s+in)\s*:?\s*(\d+)\s*(?:days?|d)?\b'
+        relative_matches = list(re.finditer(relative_pattern, text, re.IGNORECASE))
+        
+        for match in relative_matches:
+            try:
+                days = int(match.group(1))
+                # Ensure reference_date is a date object
+                if isinstance(reference_date, str):
+                    ref_date = datetime.strptime(reference_date, "%Y-%m-%d").date()
+                else:
+                    ref_date = reference_date.date() if isinstance(reference_date, datetime) else reference_date
+                
+                # Calculate due date (Net 30 means 30 days after the invoice date)
+                # For example, Oct 15 + 30 days = Nov 13 (30 days total, including Oct 15)
+                due_date = ref_date + timedelta(days=days)
+                logger.debug(f"Calculated due date {due_date} from reference date {ref_date} + {days} days")
+                return due_date.strftime("%Y-%m-%d")
+            except (ValueError, TypeError) as e:
+                logger.debug(f"Error calculating relative due date: {e}")
+                continue
+    
+    # If no relative date found, look for absolute dates using patterns
     for pattern in patterns:
         matches = list(re.finditer(pattern, text, re.IGNORECASE))
         for match in matches:
@@ -388,27 +526,8 @@ def extract_date(text: str, date_type: str = "issue", reference_date: Optional[U
                 
             logger.debug(f"Found potential date: '{date_str}' with pattern: {pattern}")
             
-            # Handle relative dates (e.g., "30", "Net 30", "30 days")
-            if is_due_date and reference_date is not None:
-                # Extract number of days from relative terms like "Net 30" or "30 days"
-                relative_match = re.match(r'(?:net\s*|in\s*|terms?\s*:?\s*)(\d+)\s*(?:days?|d)?\b', date_str.lower())
-                if relative_match:
-                    try:
-                        days = int(relative_match.group(1))
-                        # Ensure reference_date is a date object
-                        if isinstance(reference_date, str):
-                            ref_date = datetime.strptime(reference_date, "%Y-%m-%d").date()
-                        else:
-                            ref_date = reference_date.date() if isinstance(reference_date, datetime) else reference_date
-                        
-                        # Calculate due date (Net 30 means 30 days from the invoice date)
-                        # We add (days) because the invoice date is day 0
-                        due_date = ref_date + timedelta(days=days)
-                        logger.debug(f"Calculated due date {due_date} from reference date {ref_date} + {days} days")
-                        return due_date.strftime("%Y-%m-%d")
-                    except (ValueError, TypeError) as e:
-                        logger.debug(f"Error calculating due date: {e}")
-                        continue
+            # If we get here, we found an absolute date, so we can return it
+            # after parsing it through parse_date
             
             # Special handling for dates with textual months (e.g., "15-Nov-2023" or "Nov 15, 2023")
             date_str_lower = date_str.lower()
@@ -459,6 +578,9 @@ def extract_date(text: str, date_type: str = "issue", reference_date: Optional[U
         r'(?P<date>\d{1,2}[-/.]\d{1,2}[-/.]\d{4})',  # 4-digit year first
         r'(?P<date>\d{1,2}[-/.]\d{1,2}[-/.]\d{2})',   # 2-digit year second
         
+        # Compact numeric dates (DDMMYYYY, DDMMYY, etc.)
+        r'(?P<date>\b\d{8}\b)',  # YYYYMMDD or DDMMYYYY or MMDDYYYY
+        
         # Relative dates (Net 30, 30 days, etc.) - only for due dates
         r'(?P<relative>(?:net\s*|in\s*|terms?\s*:?\s*)(\d+)\s*(?:days?|d)?\b)' if is_due_date else r'(?P<nomatch>a^)',
     ]
@@ -466,7 +588,28 @@ def extract_date(text: str, date_type: str = "issue", reference_date: Optional[U
     for pattern in patterns:
         matches = list(re.finditer(pattern, text, re.IGNORECASE))
         for match in matches:
-            date_str = match.group('date')
+            date_str = None
+            if 'date' in match.groupdict() and match.group('date'):
+                date_str = match.group('date')
+            elif 'relative' in match.groupdict() and match.group('relative'):
+                # Handle relative dates separately
+                relative_match = re.match(r'(?:net\s*|in\s*|terms?\s*:?\s*)(\d+)\s*(?:days?|d)?\b', 
+                                       match.group('relative'), re.IGNORECASE)
+                if relative_match and is_due_date and reference_date:
+                    days = int(relative_match.group(1))
+                    try:
+                        if isinstance(reference_date, str):
+                            ref_date = datetime.strptime(reference_date, "%Y-%m-%d").date()
+                        else:
+                            ref_date = reference_date.date() if isinstance(reference_date, datetime) else reference_date
+                        due_date = ref_date + timedelta(days=days)
+                        logger.debug(f"Calculated relative due date {due_date} from {ref_date} + {days} days")
+                        return due_date.strftime("%Y-%m-%d")
+                    except (ValueError, TypeError) as e:
+                        logger.debug(f"Error calculating relative date: {e}")
+                        continue
+                continue
+                
             if not date_str:
                 continue
                 
