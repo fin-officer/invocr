@@ -4,7 +4,7 @@ Functions for extracting structured data from PDF text
 """
 
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from ...utils.logger import get_logger
@@ -18,44 +18,49 @@ DOCUMENT_NUMBER_PATTERNS = [
     r"(?:No\.?|Number|Nr\.?)\s*[:#]?\s*([A-Z0-9-]+)"
 ]
 
-# Common date patterns for invoice dates
+# Common date patterns for invoice dates (case-insensitive matching)
 DATE_PATTERNS = [
-    # Standard formats with labels
-    r'(?:Date|Dated|Issued?|Invoice\s+Date|Document\s+Date)\s*[:]?\s*([0-9]{1,4}[-/\\ .][0-9]{1,2}[-/\\ .][0-9]{2,4})',
-    r'(?:Date|Dated|Issued?|Invoice\s+Date|Document\s+Date)\s*[:]?\s*(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{2,4})',
-    r'(?:Date|Dated|Issued?|Invoice\s+Date|Document\s+Date)\s*[:]?\s*(?:on\s+)?(\d{1,2}(?:st|nd|rd|th)?\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[,\s]+\d{4})',
+    # Standard formats with labels (most specific first)
+    r'(?i)(?:Date|Dated|Issued?|Invoice\s+Date|Document\s+Date|Date\s+of\s+Issue|Issued?\s+on?)\s*[:]?\s*(\d{1,2}(?:st|nd|rd|th)?\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[,\s]*\d{4})',
+    r'(?i)(?:Date|Dated|Issued?|Invoice\s+Date|Document\s+Date|Date\s+of\s+Issue|Issued?\s+on?)\s*[:]?\s*(\d{1,2}[-/\\ .]\d{1,2}[-/\\ .]\d{2,4})',
+    r'(?i)(?:Date|Dated|Issued?|Invoice\s+Date|Document\s+Date|Date\s+of\s+Issue|Issued?\s+on?)\s*[:]?\s*((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s,]+\d{1,2}(?:st|nd|rd|th)?[\s,]+\d{4})',
     
     # Common date formats without labels (contextual)
-    r'(?:^|\s)(\d{1,2}[-/\\ .]\d{1,2}[-/\\ .]\d{2,4})(?=\s|$)',
-    r'(?:^|\s)(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{2,4})(?=\s|$)',
-    r'(?:^|\s)(\d{4}[-/\\ .]\d{1,2}[-/\\ .]\d{1,2})(?=\s|$)',
+    r'(?<![\d-])(\d{1,2}[-/\\ .]\d{1,2}[-/\\ .]\d{2,4})(?![\d-])',  # DD-MM-YYYY or MM/DD/YYYY
+    r'(?<![\d-])(\d{4}[-/\\ .]\d{1,2}[-/\\ .]\d{1,2})(?![\d-])',  # YYYY-MM-DD
+    r'(?i)(?<![\d-])(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[,\s]*\d{4})(?![\d-])',
+    r'(?i)(?<![\d-])((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s,]+\d{1,2}(?:st|nd|rd|th)?[\s,]+\d{4})(?![\d-])',
     
-    # Special formats
-    r'(\d{1,2}-(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*-\d{2,4})',
-    r'(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[,\s]+\d{4})',
-    r'(?:^|\s)(\d{1,2}[-/](?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[-/]\d{2,4})(?=\s|$)',
-    r'(\d{1,2}(?:st|nd|rd|th)?\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[,\s]+\d{4})',
+    # Special formats with month names
+    r'(?i)(\d{1,2}[-/](?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[-/]\d{2,4})',
+    r'(?i)(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[,\s]+\d{4})',
+    r'(?i)(\d{1,2}(?:st|nd|rd|th)?\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[,\s]*\d{4})',
     
-    # ISO format and variations
-    r'(\d{4}[-/\\ ]\d{2}[-/\\ ]\d{2})',
-    r'(\d{8})'  # YYYYMMDD or DDMMYYYY or MMDDYYYY (handled by parse_date)
+    # ISO format and variations (with word boundaries)
+    r'\b(\d{4}[-/\\ ]\d{2}[-/\\ ]\d{2})\b',
+    r'\b(\d{2}[-/\\ ]\d{2}[-/\\ ]\d{2})\b',  # YY-MM-DD or DD-MM-YY
+    r'\b(\d{8})\b'  # YYYYMMDD or DDMMYYYY or MMDDYYYY
 ]
 
-# Patterns specific to due dates
+# Patterns specific to due dates (case-insensitive matching)
 DUE_DATE_PATTERNS = [
-    # Standard due date formats with labels
-    r"(?:Due\s*Date|Payment\s*Due|Due\s*On|Payment Due Date|Due By)\s*[:]?\s*([0-9]{1,4}[/\-\. ][0-9]{1,2}[/\-\. ][0-9]{2,4})",
-    r"(?:Due\s*Date|Payment\s*Due|Due\s*On|Payment Due Date|Due By)\s*[:]?\s*(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{2,4})",
+    # Standard due date formats with labels (most specific first)
+    r'(?i)(?:Due\s*Date|Payment\s*Due|Due\s*On|Payment\s+Due\s+Date|Due\s+By|Payment\s+Date|Payment\s+Due\s+On)\s*[:]?\s*(\d{1,2}(?:st|nd|rd|th)?\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[,\s]*\d{4})',
+    r'(?i)(?:Due\s*Date|Payment\s*Due|Due\s*On|Payment\s+Due\s+Date|Due\s+By|Payment\s+Date|Payment\s+Due\s+On)\s*[:]?\s*(\d{1,2}[-/\\ .]\d{1,2}[-/\\ .]\d{2,4})',
     
-    # Common due date formats without labels (contextual)
-    r"(?:^|\s)(?:Due|Payable by|Pay by)\s+(\d{1,2}[/\-\. ]\d{1,2}[/\-\. ]\d{2,4})(?=\s|$)",
-    r"(?:^|\s)(?:Due|Payable by|Pay by)\s+(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{2,4})(?=\s|$)",
+    # Due date with label and numeric dates
+    r'(?:due|payment\s*date|date\s*due|payment\s*due\s*date)[\s:]+(\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4})',
     
-    # Relative due dates (e.g., "Due in 30 days")
-    r"(?:Due|Payment Due|Payable)\s+(?:in\s+)?(\d+)\s+days?\s+(?:from|after)?\s*(?:invoice|date)?",
+    # Relative due dates (Net 30, Due in 30 days, etc.)
+    r'(?:net|terms?|due\s+in)\s+(\d+)\s*(?:days?|d|day\s+after|day\s+from|days\s+after|days\s+from)?',
     
-    # Net terms (e.g., "Net 30")
-    r"(?:Net|Terms)[\s:]+(\d+)[\s-]*(?:days?|d)"
+    # Common due date patterns
+    r'due\s*[:]?\s*(\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4})',
+    r'due\s*[:]?\s*(\d{1,2}\s+[a-z]{3,}\s+\d{2,4})',
+    r'due\s*[:]?\s*([a-z]{3,}\s+\d{1,2}[,\s]+\d{4})',
+    r'(?:due|payment\s*date)[\s:]+(\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4})',
+    r'(?:due|payment\s*date)[\s:]+(\d{1,2}\s+[a-z]{3,}\s+\d{2,4})',
+    r'(?:due|payment\s*date)[\s:]+([a-z]{3,}\s+\d{1,2}[,\s]+\d{4})'
 ]
 
 SELLER_PATTERNS = [
@@ -100,93 +105,117 @@ NOTES_PATTERNS = [
 ]
 
 # Helper functions for data parsing
-def parse_date(date_str: str, reference_date: datetime = None, is_relative: bool = False) -> str:
+def parse_date(date_str: str, reference_date: Optional[date] = None, is_relative: bool = False) -> Optional[str]:
     """
-    Parse date string into ISO format (YYYY-MM-DD)
+    Parse a date string into YYYY-MM-DD format, handling various date formats.
     
     Args:
-        date_str: Date string in various formats
-        reference_date: Reference date for relative date calculations
-        is_relative: Whether this is a relative date (e.g., "30 days")
+        date_str: The date string to parse
+        reference_date: Reference date for relative dates (defaults to today)
+        is_relative: If True, treat the input as a number of days relative to reference_date
         
     Returns:
-        ISO formatted date string or empty string if parsing fails
+        Formatted date string (YYYY-MM-DD) or None if parsing fails
     """
     if not date_str or not isinstance(date_str, str):
-        return ""
-    
+        return None
+        
     # Clean up the date string
     date_str = date_str.strip()
     
-    # Handle relative dates (e.g., "30 days" from reference date)
-    if is_relative and reference_date:
+    # Handle relative dates (e.g., "30" or "in 30 days")
+    if is_relative and reference_date is not None:
         try:
-            days = int(date_str)
-            result_date = reference_date + timedelta(days=days)
-            return result_date.strftime("%Y-%m-%d")
-        except (ValueError, TypeError):
-            return ""
+            # Extract just the number if there's any text
+            match = re.match(r'(?:in\s+)?(\d+)\s*(?:days?|d)?', date_str, re.IGNORECASE)
+            if match:
+                days = int(match.group(1))
+                # Ensure reference_date is a date object
+                if isinstance(reference_date, str):
+                    ref_date = datetime.strptime(reference_date, "%Y-%m-%d").date()
+                else:
+                    ref_date = reference_date.date() if isinstance(reference_date, datetime) else reference_date
+                result_date = ref_date + timedelta(days=days)
+                return result_date.strftime("%Y-%m-%d")
+        except (ValueError, AttributeError) as e:
+            logger.debug(f"Error parsing relative date: {e}")
+            return None
     
     # Remove ordinal indicators (1st, 2nd, 3rd, 4th, etc.)
-    date_str = re.sub(r'(\d+)(st|nd|rd|th)\b', r'\1', date_str)
+    date_str = re.sub(r'(\d+)(st|nd|rd|th)', r'\1', date_str)
     
-    # Try parsing with various date formats
+    # Try parsing with various date formats - ordered by most specific to least specific
     date_formats = [
-        # Day-Month-Year with various separators
-        "%d/%m/%Y", "%d-%m-%Y", "%d.%m.%Y", "%d %m %Y",
-        "%d/%m/%y", "%d-%m-%y", "%d.%m.%y", "%d %m %y",  # 2-digit year
-        "%d %b %Y", "%d %B %Y",  # 01 Jan 2023, 01 January 2023
-        "%d-%b-%Y", "%d-%B-%Y",  # 01-Jan-2023, 01-January-2023
-        "%d %b, %Y", "%d %B, %Y",  # 01 Jan, 2023
-        "%d %b %y", "%d %B %y",  # 01 Jan 23
-        "%d-%b-%y", "%d-%B-%y",  # 01-Jan-23
-        "%b %d, %Y", "%B %d, %Y",  # Jan 01, 2023
-        "%b %d %Y", "%B %d %Y",  # Jan 01 2023
-        "%b %d, %Y", "%B %d, %Y",  # Jan 01, 2023 (with comma)
-        "%d %b %Y", "%d %B %Y",  # 01 Jan 2023 (no comma)
-        
-        # Month-Day-Year with various separators (US format)
-        "%m/%d/%Y", "%m-%d-%Y", "%m.%d.%Y", "%m %d %Y",
-        "%m/%d/%y", "%m-%d-%y", "%m.%d.%y", "%m %d %y",  # 2-digit year
-        "%b %d %Y", "%B %d %Y",  # Jan 01 2023
-        "%b %d, %Y", "%B %d, %Y",  # Jan 01, 2023
-        "%b-%d-%Y", "%B-%d-%Y",  # Jan-01-2023
-        "%b %d, %y", "%B %d, %y",  # Jan 01, 23
-        
-        # Year-Month-Day (ISO format)
+        # ISO format (YYYY-MM-DD) - most reliable
         "%Y-%m-%d", "%Y/%m/%d", "%Y.%m.%d", "%Y %m %d",
-        "%y-%m-%d", "%y/%m/%d", "%y.%m.%d", "%y %m %d",  # 2-digit year
         
-        # Special formats
+        # ISO format with 2-digit year (YY-MM-DD) - handle this specially
+        "%y-%m-%d", "%y/%m/%d", "%y.%m.%d", "%y %m %d",
+        
+        # Textual dates with day first (15 Nov 2023, 15-Nov-2023, etc.)
+        "%d %b %Y", "%d-%b-%Y", "%d/%b/%Y", "%d.%b.%Y",
+        "%d %B %Y", "%d-%B-%Y", "%d/%B/%Y", "%d.%B.%Y",
+        
+        # Textual dates with month first (Nov 15, 2023, Nov-15-2023, etc.)
+        "%b %d, %Y", "%b-%d-%Y", "%b/%d/%Y", "%b.%d.%Y",
+        "%B %d, %Y", "%B-%d-%Y", "%B/%d/%Y", "%B.%d.%Y",
+        
+        # Day-Month-Year with various separators (European format) - prioritize DD/MM/YYYY
+        "%d/%m/%Y", "%d-%m-%Y", "%d.%m.%Y", "%d %m %Y",
+        
+        # Month-Day-Year with various separators (US format) - deprioritize MM/DD/YYYY
+        "%m/%d/%Y", "%m-%d-%Y", "%m.%d.%Y", "%m %d %Y",
+        
+        # Day-Month-Year with 2-digit year (European format) - prioritize DD/MM/YY
+        "%d/%m/%y", "%d-%m-%y", "%d.%m.%y", "%d %m %y",
+        
+        # Month-Day-Year with 2-digit year (US format) - deprioritize MM/DD/YY
+        "%m/%d/%y", "%m-%d-%y", "%m.%d.%y", "%m %d %y",
+        
+        # Textual dates with 2-digit years
+        "%d %b %y", "%d-%b-%y", "%d/%b/%y", "%d.%b.%y",
+        "%d %B %y", "%d-%B-%y", "%d/%B/%y", "%d.%B.%y",
+        "%b %d, %y", "%b-%d-%y", "%b/%d/%y", "%b.%d.%y",
+        "%B %d, %y", "%B-%d-%y", "%B/%d/%y", "%B.%d.%y",
+        
+        # Special formats - try these last as they're more ambiguous
         "%d%m%Y", "%d%m%y",  # DDMMYYYY, DDMMYY
         "%Y%m%d", "%y%m%d",  # YYYYMMDD, YYMMDD
         "%m%d%Y", "%m%d%y",  # MMDDYYYY, MMDDYY
     ]
     
-    # Try parsing with each format
+    # Try each format until one works
     for fmt in date_formats:
         try:
-            parsed_date = datetime.strptime(date_str, fmt)
+            parsed_date = datetime.strptime(date_str, fmt).date()
             
-            # Handle 2-digit years (pivot year: current year - 80 to current year + 20)
-            if '%y' in fmt and not '%Y' in fmt:
-                current_year = datetime.now().year
-                current_century = (current_year // 100) * 100
-                current_short_year = current_year % 100
-                parsed_short_year = parsed_date.year % 100
+            # For 2-digit years, adjust the century based on current date
+            current_year = datetime.now().year
+            current_century = current_year // 100 * 100
+            parsed_year = parsed_date.year
+            
+            # If the year is less than 100, it's a 2-digit year
+            if parsed_year < 100:
+                # For 2-digit years, we need to determine the century
+                # Use a sliding window of 80 years (current year - 80 to current year + 20)
+                # to determine the most likely century
                 
-                # Determine the century
-                if parsed_short_year <= current_short_year + 20:
-                    # If the parsed year is within 20 years after the current year, use current century
-                    year = current_century + parsed_short_year
+                # Calculate the year in current century
+                year_in_current_century = current_century + parsed_year
+                
+                # If the calculated year is more than 20 years in the future,
+                # it's probably from the previous century
+                if year_in_current_century > current_year + 20:
+                    parsed_date = parsed_date.replace(year=year_in_current_century - 100)
                 else:
-                    # Otherwise, use previous century
-                    year = (current_century - 100) + parsed_short_year
-                
-                parsed_date = parsed_date.replace(year=year)
+                    parsed_date = parsed_date.replace(year=year_in_current_century)
+                    
+                logger.debug(f"Converted 2-digit year {parsed_year} to {parsed_date.year}")
             
             return parsed_date.strftime("%Y-%m-%d")
-        except ValueError:
+            
+        except ValueError as e:
+            logger.debug(f"Error parsing date '{date_str}' with format '{fmt}': {e}")
             continue
     
     # Try to parse dates in the format YYYYMMDD, DDMMYYYY, or MMDDYYYY
@@ -197,7 +226,7 @@ def parse_date(date_str: str, reference_date: datetime = None, is_relative: bool
             return parsed_date.strftime("%Y-%m-%d")
         except ValueError:
             pass
-            
+    
         # Try DDMMYYYY
         try:
             parsed_date = datetime.strptime(date_str, "%d%m%Y")
@@ -208,6 +237,26 @@ def parse_date(date_str: str, reference_date: datetime = None, is_relative: bool
         # Try MMDDYYYY
         try:
             parsed_date = datetime.strptime(date_str, "%m%d%Y")
+            return parsed_date.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+            
+        # Try YYMMDD or MMDDYY (ambiguous)
+        try:
+            # Try YYMMDD first (more common in some regions)
+            parsed_date = datetime.strptime(date_str, "%y%m%d")
+            
+            # Apply pivot year logic for 2-digit years
+            current_year = datetime.now().year
+            current_short_year = current_year % 100
+            current_century = (current_year // 100) * 100
+            
+            parsed_short_year = parsed_date.year % 100
+            if parsed_short_year > (current_short_year + 20):
+                parsed_date = parsed_date.replace(year=current_century - 100 + parsed_short_year)
+            else:
+                parsed_date = parsed_date.replace(year=current_century + parsed_short_year)
+                
             return parsed_date.strftime("%Y-%m-%d")
         except ValueError:
             pass
@@ -222,7 +271,7 @@ def parse_date(date_str: str, reference_date: datetime = None, is_relative: bool
             pass
     
     # If all parsing attempts fail, return empty string
-    return ""
+    return None
 
 def parse_float(value_str: str) -> float:
     """
@@ -271,77 +320,140 @@ def extract_document_number(text: str) -> str:
     return ""
 
 
-def extract_date(text: str, date_type: str = "issue") -> str:
+def extract_date(text: str, date_type: str = "issue", reference_date: Optional[Union[datetime, date, str]] = None) -> str:
     """
-    Extract date from text with support for various formats and relative dates
+    Extract a date from text based on the specified date type (issue or due).
     
     Args:
-        text: Text to search for date
+        text: Text to search for dates
         date_type: Type of date to extract ('issue' or 'due')
+        reference_date: Reference date (usually issue date) for relative date calculations
         
     Returns:
-        Extracted date in ISO format or empty string if not found
+        Extracted date in YYYY-MM-DD format or empty string if not found
     """
-    if not text:
+    if not text or not isinstance(text, str):
         return ""
+        
+    # Clean up the text
+    text = " ".join(text.split())  # Normalize whitespace
     
-    # First, try to find the issue date if we're looking for a due date
-    issue_date = None
-    if date_type == "due":
-        issue_date_str = extract_date(text, date_type="issue")
+    # Determine which patterns to use based on date type
+    is_due_date = date_type.lower() == "due"
+    patterns = DUE_DATE_PATTERNS if is_due_date else DATE_PATTERNS
+    
+    # For due dates, try to find issue date in the text if not provided
+    if is_due_date and reference_date is None:
+        issue_date_str = extract_date(text, "issue")
         if issue_date_str:
             try:
-                issue_date = datetime.strptime(issue_date_str, "%Y-%m-%d")
-            except (ValueError, TypeError):
+                reference_date = datetime.strptime(issue_date_str, "%Y-%m-%d")
+                logger.debug(f"Found issue date: {reference_date}")
+            except (ValueError, TypeError) as e:
+                logger.debug(f"Error parsing issue date '{issue_date_str}': {e}")
                 pass
-    
-    # Get the appropriate patterns based on date type
-    patterns = DATE_PATTERNS if date_type == "issue" else DUE_DATE_PATTERNS
-    
-    # Try each pattern to find a matching date
-    for pattern in patterns:
-        matches = re.finditer(pattern, text, re.IGNORECASE | re.MULTILINE)
-        for match in matches:
-            if not match.groups():
-                continue
                 
-            # Extract the matched date string
-            date_str = match.group(1).strip()
+    # First, try to find a date using the patterns
+    for pattern in patterns:
+        matches = list(re.finditer(pattern, text, re.IGNORECASE))
+        for match in matches:
+            # Get the first non-None group (the actual date part)
+            date_str = None
+            for i in range(1, 10):  # Check up to 9 capture groups
+                try:
+                    if match.group(i):
+                        date_str = match.group(i).strip()
+                        break
+                except IndexError:
+                    break
+            
             if not date_str:
                 continue
+                
+            logger.debug(f"Found potential date: '{date_str}' with pattern: {pattern}")
             
-            # Handle relative dates (e.g., "30 days")
-            if date_type == "due" and any(term in match.group(0).lower() for term in ["net ", "terms", "days"]):
-                # Extract the number of days
-                days_match = re.search(r'\b(\d+)\s*(?:days?|d)\b', match.group(0), re.IGNORECASE)
-                if days_match and issue_date:
-                    days = int(days_match.group(1))
-                    due_date = issue_date + timedelta(days=days)
-                    return due_date.strftime("%Y-%m-%d")
+            # Handle relative dates (e.g., "30", "Net 30", "30 days")
+            if is_due_date and reference_date is not None:
+                # Extract number of days from relative terms like "Net 30" or "30 days"
+                relative_match = re.match(r'(?:net\s+|in\s+)?(\d+)\s*(?:days?|d)?', date_str.lower())
+                if relative_match:
+                    try:
+                        days = int(relative_match.group(1))
+                        # Ensure reference_date is a date object
+                        if isinstance(reference_date, str):
+                            ref_date = datetime.strptime(reference_date, "%Y-%m-%d").date()
+                        else:
+                            ref_date = reference_date.date() if isinstance(reference_date, datetime) else reference_date
+                        
+                        # Calculate due date (subtract 1 day since "Net 30" typically means 30 days after invoice date)
+                        due_date = ref_date + timedelta(days=days)
+                        logger.debug(f"Calculated due date {due_date} from reference date {ref_date} + {days} days")
+                        return due_date.strftime("%Y-%m-%d")
+                    except (ValueError, TypeError) as e:
+                        logger.debug(f"Error calculating due date: {e}")
+                        continue
             
-            # Parse the date string
-            parsed_date = parse_date(date_str, reference_date=issue_date, is_relative=False)
-            if parsed_date:
+            # Special handling for dates with textual months (e.g., "15-Nov-2023" or "Nov 15, 2023")
+            date_str_lower = date_str.lower()
+            if any(month in date_str_lower for month in ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']):
+                # Try with different date formats that include textual months
+                text_date_formats = [
+                    "%d-%b-%Y", "%d-%B-%Y", "%b-%d-%Y", "%B-%d-%Y",  # 15-Nov-2023, 15-November-2023
+                    "%d %b %Y", "%d %B %Y", "%b %d, %Y", "%B %d, %Y",  # 15 Nov 2023, 15 November 2023, Nov 15, 2023
+                    "%b %d %Y", "%B %d %Y",  # Nov 15 2023, November 15 2023
+                    "%Y-%b-%d", "%Y-%B-%d",  # 2023-Nov-15, 2023-November-15
+                ]
+                
+                for fmt in text_date_formats:
+                    try:
+                        # Clean up the date string by removing any ordinal indicators and extra spaces
+                        clean_date_str = re.sub(r'(\d+)(st|nd|rd|th)', r'\1', date_str)
+                        clean_date_str = re.sub(r'[,\s]+', ' ', clean_date_str).strip()
+                        
+                        # Try parsing with the current format
+                        parsed_date = datetime.strptime(clean_date_str, fmt).strftime("%Y-%m-%d")
+                        logger.debug(f"Successfully parsed date '{date_str}' with format '{fmt}': {parsed_date}")
+                        return parsed_date
+                    except ValueError as e:
+                        logger.debug(f"Failed to parse '{date_str}' with format '{fmt}': {e}")
+                        continue
+                        
+                        # If we get here, either the date is valid or we can't fix it
+                        return parsed_date
+                    except (ValueError, AttributeError) as e:
+                        logger.debug(f"Error validating date order: {e}")
+                
                 return parsed_date
     
-    # If no date found and this is a due date, try to find relative dates without explicit patterns
-    if date_type == "due" and issue_date:
-        # Look for patterns like "Net 30" or "30 days"
-        relative_patterns = [
-            r'(?:net|terms?)[\s:]+(\d+)[\s-]*(?:days?|d)',
-            r'(?:due in|payment due in|payable in)[\s:]+(\d+)[\s-]*(?:days?|d)',
-            r'(\d+)[\s-]*(?:days?|d)[\s-]*(?:net|due|from date|from invoice)'
-        ]
-        
-        for pattern in relative_patterns:
-            match = re.search(pattern, text, re.IGNORECASE)
-            if match and match.group(1):
-                try:
-                    days = int(match.group(1))
-                    due_date = issue_date + timedelta(days=days)
-                    return due_date.strftime("%Y-%m-%d")
-                except (ValueError, TypeError):
-                    continue
+    # If no date found with patterns, try to find a standalone date
+    # This is a fallback and should be used with caution
+    standalone_patterns = [
+        r'\b(\d{1,2}[-/\\ .]\d{1,2}[-/\\ .](?:\d{4}|\d{2}))\b',  # DD-MM-YYYY or DD-MM-YY
+        r'\b((?:\d{4}|\d{2})[-/\\ .]\d{1,2}[-/\\ .]\d{1,2})\b',  # YYYY-MM-DD or YY-MM-DD
+        r'\b(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[,\s]*(?:\d{4}|\d{2})?)\b',
+        r'\b((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s,]+\d{1,2}(?:st|nd|rd|th)?[\s,]+(?:\d{4}|\d{2}))\b',
+        r'\b(\d{8})\b'  # YYYYMMDD or DDMMYYYY or MMDDYYYY
+    ]
+    
+    for pattern in standalone_patterns:
+        matches = list(re.finditer(pattern, text, re.IGNORECASE))
+        for match in matches:
+            date_str = match.group(1)
+            if not date_str:
+                continue
+                
+            parsed_date = parse_date(date_str)
+            if parsed_date:
+                # Additional validation for due dates to ensure they're after the reference date
+                if is_due_date and reference_date is not None:
+                    try:
+                        parsed_dt = datetime.strptime(parsed_date, "%Y-%m-%d").date()
+                        ref_dt = reference_date.date() if isinstance(reference_date, datetime) else reference_date
+                        if parsed_dt < ref_dt:
+                            continue  # Skip dates before the reference date for due dates
+                    except (ValueError, AttributeError):
+                        pass
+                return parsed_date
     
     return ""
 
