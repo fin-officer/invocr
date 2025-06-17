@@ -527,6 +527,8 @@ def create_extractor(languages: List[str] = None) -> DataExtractor:
     from invocr.extractors.de.extractor import GermanExtractor
     from invocr.extractors.en.extractor import EnglishExtractor
     from invocr.extractors.pl.extractor import PolishExtractor
+    from invocr.extractors.es.extractor import SpanishExtractor
+    from invocr.extractors.fr.extractor import FrenchExtractor
 
     # Default to English if no languages specified
     if not languages:
@@ -539,6 +541,10 @@ def create_extractor(languages: List[str] = None) -> DataExtractor:
         return PolishExtractor(languages)
     elif primary_lang == "de":
         return GermanExtractor(languages)
+    elif primary_lang == "es":
+        return SpanishExtractor(languages)
+    elif primary_lang == "fr":
+        return FrenchExtractor(languages)
     else:
         # Default to English extractor for all other languages
         return EnglishExtractor(languages)

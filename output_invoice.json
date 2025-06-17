@@ -1,0 +1,35 @@
+{
+  "document_number": "Information",
+  "po_number": "AE02217500038CEE",
+  "currency": "TAX",
+  "seller": {
+    "name": "! Page 1 of!",
+    "address": "139c - 14 11317 TALLINN ESTONIA Customer VAT No: EE102146710 Item]Details Service Term: 31-AUG-2024 to 29-SEP-2024 PRODUCT NUMBER PRODUCT DESCRIPTION QUANTITY UNIT UNIT PRICE NET AMOUNT TAX RATE TAXES TOTAL 65183246 InDesign 1 EA 21.84 21.84 0.00% 0.00 21.84 Invoice Total NET AMOUNT (EUR) 21.84 TAXES (SEE DETAILS FOR RATES) 0.00 VAT GRAND TOUAL (SUR) am Comments: Note:lf no tax is charged and your tax identification number is displayed, then this is either an exempt or a reverse charge transaction Reverse charge supply - customer to self assess VAT EE102146710 http://www.adobe.com/support/service/ No VAT liability in Seller's Country. Customer to Reverse Charge. Art. 44 & 196 EC Dir. 2006/112. Billing Contact https://helpx.adobe.com/contact.html Thank you for your business! Page 1 of!",
+    "tax_id": "No",
+    "email": "",
+    "phone": "- 14 11317"
+  },
+  "buyer": {
+    "name": "",
+    "address": "",
+    "tax_id": "",
+    "email": "",
+    "phone": ""
+  },
+  "items": [],
+  "totals": {
+    "subtotal": 0.0,
+    "tax_amount": 0.0,
+    "total": 65183246.0,
+    "tax_rate": 0.0
+  },
+  "payment_terms": "PayPal VAT No: IE6364992H Purchase Order AE02217500038CEE Order Number 7141945422 Customer Number 1284102906 Currency EUR Bill To Tomasz Zdzislaw Sapletta Pärnu mnt. 139c - 14 11317 TALLINN ESTONIA Customer VAT No: EE102146710 Item]Details Service Term: 31-AUG-2024 to 29-SEP-2024 PRODUCT NUMBER PRODUCT DESCRIPTION QUANTITY UNIT UNIT PRICE NET AMOUNT TAX RATE TAXES TOTAL 65183246 InDesign 1 EA 21.84 21.84 0.00% 0.00 21.84 Invoice Total NET AMOUNT (EUR) 21.84 TAXES (SEE DETAILS FOR RATES) 0.00 VAT GRAND TOUAL (SUR) am Comments: Note:lf no tax is charged and your tax identification number is displayed, then this is either an exempt or a reverse charge transaction Reverse charge supply - customer to self assess VAT EE102146710 http://www.adobe.com/support/service/ No VAT liability in Seller's Country. Customer to Reverse Charge. Art. 44 & 196 EC Dir. 2006/112. Billing Contact https://helpx.adobe.com/contact.html Thank you for your business! Page 1 of!",
+  "payment_method": "paypal",
+  "_metadata": {
+    "source_type": "pdf_ocr",
+    "extraction_method": "ocr",
+    "ocr_confidence": 0.9262874251497005,
+    "pages_processed": 1,
+    "document_type": "invoice"
+  }
+}
