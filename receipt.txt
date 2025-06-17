@@ -1,0 +1,13 @@
+RECEIPT #12345
+Date: 2025-06-17
+
+Item      Qty  Price  Total
+----------------------------
+Coffee    2    $3.50  $7.00
+Sandwich  1    $8.99  $8.99
+----------------------------
+Subtotal: $15.99
+Tax:      $1.28
+Total:    $17.27
+
+Thank you for your business!

@@ -81,12 +81,15 @@ poetry run invocr batch ./invoices/ ./output/ --format xml
 ```bash
 # Convert a single PDF to JSON
 poetry run python pdf2json.py path/to/input.pdf --output path/to/output.json
+poetry run python pdf2json.py
 ```
 
 #### 2. Batch Process Multiple PDFs
 ```bash
 # Process all PDFs in a directory
-poetry run python process_pdfs.py --input-dir ./2024.09/attachments/ --output-dir ./2024.09/json/
+poetry run python process_pdfs.py --input-dir ./2024.09/attachments/ --output-dir ./2024.09/attachments/
+poetry run python process_pdfs.py --input-dir ./2024.10/attachments/ --output-dir ./2024.10/attachments/
+poetry run python process_pdfs.py --input-dir ./2024.11/attachments/ --output-dir ./2024.11/attachments/
 
 # Available options:
 # --input-dir: Directory containing PDF files (default: 2024.09/attachments)

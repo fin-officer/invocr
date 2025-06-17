@@ -78,7 +78,7 @@ class EnglishExtractor(DataExtractor):
             r"\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}",  # 01 Jan 2023
             r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s,]+\d{1,2}[,\s]+\d{4}"  # Jan 01, 2023
         ]
-        date_union = "|".join(date_subpatterns)
+        date_union = "(?:" + "|".join(date_subpatterns) + ")"
 
         # Document number patterns
         doc_patterns = [

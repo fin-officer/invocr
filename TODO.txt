@@ -1,0 +1,9 @@
+in that t generated file /home/tom/github/fin-officer/invocr/json_output/invoice.json  "total": 14.0 ? is wrong should be  like subtotal, because is just one items, sho the sum should be value of one item if is just one item, if is more items then sum
+
+in /home/tom/github/fin-officer/invocr/2024.09/attachments
+are .pdf files , they  should be processed and saved as json in json folder or in the same folder where is pdf, with the same name as .pdf, 
+creaste the same logic in script pdf_to_json.py such we have in html_to_png.py but in
+poetry run python html_to_png.py --month 11 --year 2024
+poetry run python pdf_to_json.py --month 11 --year 2024
+
+poetry run python invocr batch ./2024.09/attachments/ ./2024.09/attachments/ --format json

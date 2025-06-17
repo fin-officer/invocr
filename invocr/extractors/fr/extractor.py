@@ -82,7 +82,7 @@ class FrenchExtractor(DataExtractor):
         
         # Issue date (Date de facturation)
         issue_date_match = re.search(
-            r'(?i)(?:Date de facturation|Date d\'émission|Date)[\s:]*([0-9]{1,2}[-/][0-9]{1,2}[-/][0-9]{2,4})',
+            r'(?i)(?:Date\s+de\s+facturation|Date\s+d\'émission|Date)[\s:]*([0-9]{1,2}[-/][0-9]{1,2}[-/][0-9]{2,4})',
             text
         )
         if issue_date_match:
@@ -90,7 +90,7 @@ class FrenchExtractor(DataExtractor):
             
         # Due date (Date d'échéance)
         due_date_match = re.search(
-            r'(?i)(?:Date d\'[ée]ch[ée]ance|Date de paiement|[ée]ch[ée]ance)[\s:]*([0-9]{1,2}[-/][0-9]{1,2}[-/][0-9]{2,4})',
+            r'(?i)(?:Date\s+d\'[ée]ch[ée]ance|Date\s+de\s+paiement|[ée]ch[ée]ance)[\s:]*([0-9]{1,2}[-/][0-9]{1,2}[-/][0-9]{2,4})',
             text
         )
         if due_date_match:
