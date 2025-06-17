@@ -78,6 +78,9 @@ invocr batch ./2024.09/attachments/ ./2024.09/attachments/json --format json
 invocr batch ./2024.09/attachments/ ./2024.09/attachments/ --format xml
 poetry run python pdf2json.py invoice.pdf --output invoice.json
 poetry run python process_pdfs.py --input-dir ./2024.09/attachments/ --output-dir ./2024.09/attachments/
+poetry run python process_pdfs.py --input-dir ./2024.10/attachments/ --output-dir ./2024.10/attachments/
+poetry run python process_pdfs.py --input-dir ./2024.11/attachments/ --output-dir ./2024.11/attachments/
+poetry run python debug_pdf.py /home/tom/github/fin-officer/invocr/2024.10/attachments/Receipt-2459-8027.pdf
 
 # Full PDF to HTML conversion pipeline (one step)
 invocr pipeline --input invoice.pdf --output ./output/invoice.html --start-format pdf --end-format html

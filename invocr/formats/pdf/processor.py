@@ -18,9 +18,13 @@ from .converter import (
     pdf_to_images,
     pdf_to_text,
     extract_tables,
-    get_page_count,
-    export_to_json
+    get_page_count
 )
+
+import json
+from pathlib import Path
+from typing import Union, Dict, Any
+from ...utils.helpers import ensure_directory
 
 logger = logging.getLogger(__name__)
 
@@ -211,23 +215,32 @@ class PDFProcessor:
             page_numbers=page_numbers
         )
     
-    def export_to_json(self, output_file: Union[str, Path], 
-                      include_text: bool = True,
-                      include_tables: bool = True,
-                      include_metadata: bool = True) -> None:
+    def extract_structured_data(self) -> Dict[str, Any]:
         """
-        Export PDF data to a JSON file.
+        Extract structured data from the PDF.
+        
+        Returns:
+            Dictionary containing extracted data
+        """
+        data = {
+            'text': self.extract_text(),
+            'tables': self.extract_tables(),
+            'metadata': self.metadata
+        }
+        return data
+    
+    def export_to_json(self, output_file: Union[str, Path], indent: int = 2, **kwargs) -> None:
+        """
+        Export the processed document to a JSON file.
         
         Args:
-            output_file: Path to save the JSON output
-            include_text: Whether to include extracted text
-            include_tables: Whether to include extracted tables
-            include_metadata: Whether to include PDF metadata
+            output_file: Path to the output JSON file
+            indent: Number of spaces for indentation in the output JSON
+            **kwargs: Additional arguments to pass to json.dump()
         """
-        export_to_json(
-            str(self.file_path),
-            output_file=output_file,
-            include_text=include_text,
-            include_tables=include_tables,
-            include_metadata=include_metadata
-        )
+        data = self.extract_structured_data()
+        output_file = Path(output_file)
+        ensure_directory(output_file.parent)
+        
+        with open(output_file, 'w') as f:
+            json.dump(data, f, indent=indent, default=str, **kwargs)

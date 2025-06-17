@@ -13,7 +13,6 @@ from pdf2image import convert_from_path
 
 from ...utils.helpers import ensure_directory
 from ...utils.logger import get_logger
-from .processor import PDFProcessor
 
 logger = get_logger(__name__)
 
@@ -127,31 +126,3 @@ def extract_tables(pdf_path: Union[str, Path]) -> List[List[List[str]]]:
         
     return tables
 
-
-def pdf_to_json(
-    pdf_path: Union[str, Path], output_path: Union[str, Path, None] = None
-) -> str:
-    """
-    Convert PDF to JSON format
-
-    Args:
-        pdf_path: Path to the PDF file
-        output_path: Optional path to save the JSON output
-
-    Returns:
-        JSON string with extracted data
-    """
-    processor = PDFProcessor()
-    data = processor.extract_structured_data(pdf_path)
-    
-    # Convert to JSON
-    json_str = json.dumps(data, indent=2, default=str)
-    
-    # Save to file if output path is provided
-    if output_path:
-        output_path = Path(output_path)
-        ensure_directory(output_path.parent)
-        with open(output_path, "w") as f:
-            f.write(json_str)
-            
-    return json_str

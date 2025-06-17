@@ -1,0 +1,29 @@
+{
+  "document_type": "invoice",
+  "document_number": "ing",
+  "issue_date": "",
+  "due_date": "",
+  "seller": {
+    "name": "To: Your Company Inc. Acme Corp 123 Business Rd. 456"
+  },
+  "buyer": {
+    "name": "Your Company Inc. Acme Corp 123 Business Rd. 456 Customer St New York, NY 10001 Boston, MA 02108 Email: billing@yourcompany.com Email: accounts@acmecorp.com Tax ID: US123456789 Tax ID: US987654321 Invoice Items Web Design Services $100.00 $1,000.00 Hosting (Monthly) $50.00 $50.00 Subiotal: $1,065.00 Tax (8%): $85.20 Total: $1,150.20 Payment Terms: Nez 30 Please make checks payable to Your Company Inc. Notes: Thank you for your business! Additional Information: - This is a sample invoice for testing purposes - Please contact us with any questions"
+  },
+  "items": [],
+  "totals": {
+    "subtotal": 0.0,
+    "tax_amount": 0.0,
+    "total": 1150.2
+  },
+  "payment_method": "check",
+  "bank_account": "",
+  "notes": "",
+  "confidence": 0.7,
+  "_metadata": {
+    "source_type": "pdf_ocr",
+    "extraction_method": "ocr",
+    "ocr_confidence": 0.9449438202247191,
+    "pages_processed": 1,
+    "document_type": "invoice"
+  }
+}
