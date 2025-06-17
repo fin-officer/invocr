@@ -1,3 +1,7 @@
+[🏠 Home](../README.md) | [📚 Documentation](./) | [📋 Examples](./examples.md) | [🔌 API](./api.md) | [💻 CLI](./cli.md)
+
+---
+
 # CLI documentation
 
 # InvOCR CLI Documentation
@@ -71,4 +75,11 @@ invocr json2xml invoice.json eu_invoice.xml
 
 # Create HTML invoice
 invocr json2html invoice.json invoice.html --template modern
-```
+```---
+
+### 📚 Related Documentation
+- [Back to Top](#)
+- [Main Documentation](../README.md)
+- [All Examples](./examples.md)
+- [API Reference](./api.md)
+- [CLI Documentation](./cli.md)

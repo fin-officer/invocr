@@ -9,7 +9,12 @@ import tempfile
 from pathlib import Path
 
 # Add the parent directory to the Python path to ensure invocr can be imported
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+project_root = os.path.abspath(os.path.dirname(__file__))
+sys.path.insert(0, project_root)
+# Also add the invocr subdirectory to the path
+invocr_dir = os.path.join(project_root, 'invocr')
+if os.path.isdir(invocr_dir):
+    sys.path.insert(0, invocr_dir)
 
 # Suppress invoice2data logging errors
 logging.basicConfig(level=logging.ERROR)

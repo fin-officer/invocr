@@ -1,3 +1,7 @@
+[🏠 Home](../README.md) | [📚 Documentation](./) | [📋 Examples](./examples.md) | [🔌 API](./api.md) | [💻 CLI](./cli.md)
+
+---
+
 # InvOCR - Intelligent Invoice Processing
 
 > 🔍 Enterprise-grade document processing with advanced OCR for invoices, receipts, and financial documents
@@ -836,3 +840,11 @@ This project is licensed under the Apache License - see the [LICENSE](LICENSE) f
 
 
 
+---
+
+### 📚 Related Documentation
+- [Back to Top](#)
+- [Main Documentation](../README.md)
+- [All Examples](./examples.md)
+- [API Reference](./api.md)
+- [CLI Documentation](./cli.md)

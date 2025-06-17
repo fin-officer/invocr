@@ -1,3 +1,7 @@
+[🏠 Home](../README.md) | [📚 Documentation](./) | [📋 Examples](./examples.md) | [🔌 API](./api.md) | [💻 CLI](./cli.md)
+
+---
+
 # InvOCR CLI Usage Examples
 
 This document provides practical examples for using the InvOCR CLI and REST API to process invoices and documents.
@@ -147,3 +151,11 @@ invocr info
 ---
 
 For more details, see the [CLI Reference](../cli.md) and [API Reference](../api.md).
+---
+
+### 📚 Related Documentation
+- [Back to Top](#)
+- [Main Documentation](../README.md)
+- [All Examples](./examples.md)
+- [API Reference](./api.md)
+- [CLI Documentation](./cli.md)

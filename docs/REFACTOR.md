@@ -1,3 +1,7 @@
+[🏠 Home](../README.md) | [📚 Documentation](./) | [📋 Examples](./examples.md) | [🔌 API](./api.md) | [💻 CLI](./cli.md)
+
+---
+
 # Refactoring Notes
 
 ## Changes Made
@@ -78,3 +82,11 @@ print(f"Failed to process {results['failed']} files")
 2. Consider adding more advanced PDF processing features
 3. Add support for additional output formats
 4. Implement progress tracking for large batches of files
+---
+
+### 📚 Related Documentation
+- [Back to Top](#)
+- [Main Documentation](../README.md)
+- [All Examples](./examples.md)
+- [API Reference](./api.md)
+- [CLI Documentation](./cli.md)

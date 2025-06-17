@@ -1,3 +1,7 @@
+[🏠 Home](../README.md) | [📚 Documentation](./) | [📋 Examples](./examples.md) | [🔌 API](./api.md) | [💻 CLI](./cli.md)
+
+---
+
 # InvOCR API Documentation
 
 ## Overview
@@ -76,3 +80,11 @@ curl "http://localhost:8000/status/job-id"
 # Download result
 curl "http://localhost:8000/download/job-id" -o result.json
 ```
+---
+
+### 📚 Related Documentation
+- [Back to Top](#)
+- [Main Documentation](../README.md)
+- [All Examples](./examples.md)
+- [API Reference](./api.md)
+- [CLI Documentation](./cli.md)

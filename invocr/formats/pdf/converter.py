@@ -1,0 +1,157 @@
+"""
+PDF conversion utilities
+Handles PDF to text/image conversion and JSON export
+"""
+
+import json
+import tempfile
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
+
+import pdfplumber
+from pdf2image import convert_from_path
+
+from ...utils.helpers import ensure_directory
+from ...utils.logger import get_logger
+from .processor import PDFProcessor
+
+logger = get_logger(__name__)
+
+
+def pdf_to_text(pdf_path: Union[str, Path]) -> str:
+    """
+    Extract text directly from PDF with improved layout preservation
+
+    Args:
+        pdf_path: Path to the PDF file
+
+    Returns:
+        Extracted text with preserved layout
+    """
+    pdf_path = Path(pdf_path)
+    text = ""
+    
+    try:
+        with pdfplumber.open(pdf_path) as pdf:
+            for page in pdf.pages:
+                page_text = page.extract_text(x_tolerance=3, y_tolerance=3)
+                if page_text:
+                    text += page_text + "\n\n"
+    except Exception as e:
+        logger.error(f"Error extracting text from PDF: {e}")
+        return ""
+        
+    return text
+
+
+def pdf_to_images(
+    pdf_path: Union[str, Path],
+    output_dir: Union[str, Path],
+    format: str = "png",
+    dpi: int = 300,
+) -> List[Path]:
+    """
+    Convert PDF pages to images
+
+    Args:
+        pdf_path: Path to the PDF file
+        output_dir: Directory to save the images
+        format: Image format (png, jpg, etc.)
+        dpi: Image resolution
+
+    Returns:
+        List of paths to the generated images
+    """
+    pdf_path = Path(pdf_path)
+    output_dir = Path(output_dir)
+    ensure_directory(output_dir)
+    
+    try:
+        # Convert PDF to images
+        images = convert_from_path(pdf_path, dpi=dpi)
+        
+        # Save images
+        image_paths = []
+        for i, image in enumerate(images):
+            image_path = output_dir / f"{pdf_path.stem}_page_{i+1}.{format}"
+            image.save(str(image_path), format.upper())
+            image_paths.append(image_path)
+            
+        return image_paths
+    except Exception as e:
+        logger.error(f"Error converting PDF to images: {e}")
+        return []
+
+
+def get_page_count(pdf_path: Union[str, Path]) -> int:
+    """
+    Get number of pages in PDF
+
+    Args:
+        pdf_path: Path to the PDF file
+
+    Returns:
+        Number of pages
+    """
+    pdf_path = Path(pdf_path)
+    
+    try:
+        with pdfplumber.open(pdf_path) as pdf:
+            return len(pdf.pages)
+    except Exception as e:
+        logger.error(f"Error getting page count: {e}")
+        return 0
+
+
+def extract_tables(pdf_path: Union[str, Path]) -> List[List[List[str]]]:
+    """
+    Extract tables from PDF
+
+    Args:
+        pdf_path: Path to the PDF file
+
+    Returns:
+        List of tables, where each table is a list of rows, and each row is a list of cells
+    """
+    pdf_path = Path(pdf_path)
+    tables = []
+    
+    try:
+        with pdfplumber.open(pdf_path) as pdf:
+            for page in pdf.pages:
+                page_tables = page.extract_tables()
+                if page_tables:
+                    tables.extend(page_tables)
+    except Exception as e:
+        logger.error(f"Error extracting tables from PDF: {e}")
+        
+    return tables
+
+
+def pdf_to_json(
+    pdf_path: Union[str, Path], output_path: Union[str, Path, None] = None
+) -> str:
+    """
+    Convert PDF to JSON format
+
+    Args:
+        pdf_path: Path to the PDF file
+        output_path: Optional path to save the JSON output
+
+    Returns:
+        JSON string with extracted data
+    """
+    processor = PDFProcessor()
+    data = processor.extract_structured_data(pdf_path)
+    
+    # Convert to JSON
+    json_str = json.dumps(data, indent=2, default=str)
+    
+    # Save to file if output path is provided
+    if output_path:
+        output_path = Path(output_path)
+        ensure_directory(output_path.parent)
+        with open(output_path, "w") as f:
+            f.write(json_str)
+            
+    return json_str

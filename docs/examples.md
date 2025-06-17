@@ -1,3 +1,7 @@
+[🏠 Home](../README.md) | [📚 Documentation](./) | [📋 Examples](./examples.md) | [🔌 API](./api.md) | [💻 CLI](./cli.md)
+
+---
+
 # InvOCR Examples
 
 This document provides practical examples of how to use InvOCR for various document processing tasks.
@@ -166,3 +170,11 @@ See detailed validation examples in [validation_examples.md](./examples/validati
    - Use `is_valid_pdf_simple()` for quick validation before full processing
 
 For more help, please [open an issue](https://github.com/fin-officer/invocr/issues).
+---
+
+### 📚 Related Documentation
+- [Back to Top](#)
+- [Main Documentation](../README.md)
+- [All Examples](./examples.md)
+- [API Reference](./api.md)
+- [CLI Documentation](./cli.md)
