@@ -81,24 +81,31 @@ DEFAULT_RULES: Dict[str, Any] = {
         }
     ],
     
-    'invoice_date': [
+    'issue_date': [
         {
-            'pattern': r'(?i)(?:date|datum|data|fecha|date de facturation)[\s:]+(\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{2,4})',
+            'pattern': r'(?i)date\s+paid\s+([A-Za-z]+\s+\d{1,2},\s+\d{4})',
             'type': 'date',
-            'format': '%d.%m.%Y',
+            'confidence': 0.95,
+            'date_formats': ['%B %d, %Y'],
+            'priority': 1
+        },
+        {
+            'pattern': r'(?i)(?:date|datum|fecha|data|datum|date de facturation)[\s:]+([0-9]{1,2}[/\-\.][0-9]{1,2}[/\-\.](?:[0-9]{2}|[0-9]{4}))',
+            'type': 'date',
             'confidence': 0.9,
-            'description': 'Date after common labels (DD.MM.YYYY)'
+            'date_formats': ['%d/%m/%Y', '%d-%m-%Y', '%d.%m.%Y', '%Y-%m-%d', '%m/%d/%Y', '%m-%d-%Y']
         },
         {
             'pattern': r'(\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{2,4})',
             'type': 'date',
+            'date_formats': ['%d/%m/%Y', '%d-%m-%Y', '%d.%m.%Y', '%m/%d/%Y', '%m-%d-%Y'],
             'confidence': 0.7,
             'description': 'Generic date format (DD/MM/YYYY or MM/DD/YYYY)'
         },
         {
             'pattern': r'(\d{4}[-/]\d{1,2}[-/]\d{1,2})',
             'type': 'date',
-            'format': '%Y-%m-%d',
+            'date_formats': ['%Y-%m-%d', '%Y/%m/%d'],
             'confidence': 0.8,
             'description': 'ISO date format (YYYY-MM-DD)'
         }
@@ -128,8 +135,14 @@ DEFAULT_RULES: Dict[str, Any] = {
     # Seller information
     'seller.name': [
         {
-            'pattern': r'(?i)(?:from|vendor|supplier|seller|lieferant|fournisseur|fornitore|proveedor)[\s:]+(.+?)(?:\n|$)',
+            'pattern': r'^([A-Za-z0-9][^\n]+?)\s*\n(?:\s*\S+\s+\S+\s+\S+\s*\n)?\s*Bill to',
             'type': 'str',
+            'confidence': 0.95,
+            'priority': 1
+        },
+        {
+            'pattern': r'(?i)(?:from|seller|vendor|supplier|lieferant|fournisseur|fornecedor)[\s:]+(.+?)(?=\n|$|[A-Z][a-z]+\s*:)'
+        },    'type': 'str',
             'confidence': 0.85,
             'description': 'Seller name after common labels'
         },
@@ -152,11 +165,21 @@ DEFAULT_RULES: Dict[str, Any] = {
     
     'seller.address': [
         {
-            'pattern': r'(?i)(?:address|adresse|indirizzo|dirección)[\s:]+([^\n]+(?:\n[^\n]+){0,3})',
+            'pattern': r'(?m)^([A-Za-z0-9][^\n]+?)\s*\n(?:\s*[^\n]+\s*\n)?\s*Bill to',
             'type': 'str',
-            'confidence': 0.85,
-            'description': 'Multiline address after label'
+            'confidence': 0.9,
+            'priority': 1,
+            'group': 1
         },
+        {
+            'pattern': r'(?i)(?:seller\s+address|vendor\s+address|company\s+address)[\s:]+(.+?)(?=\n|$|\s+[A-Z][a-z]+\s*:)'
+        },
+        {
+            'pattern': r'\d+\s+[\w\s]+(?:\n|,)\s*[A-Za-z\s]+(?:\n|,)\s*[A-Z]{2}\s+\d{5}(?:-\d{4})?',
+            'type': 'str',
+            'confidence': 0.8,
+            'description': 'US-style address pattern'
+        }
         {
             'pattern': r'\d+\s+[\w\s]+(?:\n|,)\s*[A-Za-z\s]+(?:\n|,)\s*[A-Z]{2}\s+\d{5}(?:-\d{4})?',
             'type': 'str',
@@ -211,10 +234,16 @@ DEFAULT_RULES: Dict[str, Any] = {
     # Totals and amounts
     'total_amount': [
         {
-            'pattern': r'(?i)(?:total|gesamtbetrag|montant total|importe total|totale)\s*(?:[A-Z]{3})?\s*[=:]?\s*([0-9]+[,.][0-9]{2})',
-            'type': 'decimal',
-            'confidence': 0.95,
-            'description': 'Total amount with optional currency'
+            'pattern': r'(?i)total\s+\$?([0-9]+[,\.]?[0-9]*)',
+            'type': 'currency',
+            'confidence': 0.98,
+            'priority': 1
+        },
+        {
+            'pattern': r'(?i)(?:total\s+amount|total|summe|total\s+à\s+payer|importe\s+total|total\s+general)[\s:]*[$€£¥]?\s*([0-9]+[,\.]?[0-9]*)',
+            'type': 'currency',
+            'confidence': 0.95
+        },    'description': 'Total amount with optional currency'
         },
         {
             'pattern': r'\bTOTAL\b[^\d]*([0-9]+[,.][0-9]{2})',
@@ -260,27 +289,30 @@ DEFAULT_RULES: Dict[str, Any] = {
     # Line items
     'items': [
         {
-            'pattern': r'(?i)(\d+)\s+([^\n\d]+?)\s+([\d,.]+)\s+([\d,.]+)(?:\s+([\d,.]+))?',
-            'groups': {
-                'quantity': 1,
-                'description': 2,
-                'unit_price': 3,
-                'total_price': 4,
-                'tax_amount': 5
-            },
-            'type': 'items',
-            'confidence': 0.85,
-            'description': 'Tabular line items with quantity, description, prices'
+            'start_pattern': r'(?i)description\s+Qty\s+Unit price\s+Amount',
+            'end_pattern': r'(?i)(?:subtotal|total|summe|total\s+à\s+payer|importe\s+total|total\s+general|total\s+amount)',
+            'row_pattern': r'^\s*([^\n\r]+?)\s+([0-9]+(?:[,\.][0-9]+)?)\s+([$€£¥]?\s*[0-9]+(?:[,\.][0-9]+))\s+([$€£¥]?\s*[0-9]+(?:[,\.][0-9]+))\s*$',
+            'columns': [
+                {'name': 'description', 'type': 'str'},
+                {'name': 'quantity', 'type': 'float'},
+                {'name': 'unit_price', 'type': 'currency'},
+                {'name': 'amount', 'type': 'currency'}
+            ],
+            'required': ['description', 'quantity', 'unit_price', 'amount'],
+            'confidence': 0.9,
+            'priority': 1
         },
         {
-            'pattern': r'(?i)([^\n\d]+?)\s+([\d,.]+)(?:\s+[A-Z]{3})?\s+([\d,.]+)',
-            'groups': {
-                'description': 1,
-                'quantity': 2,
-                'unit_price': 3
-            },
-            'type': 'items',
-            'confidence': 0.8,
+            'start_pattern': r'(?i)(?:description|item|description|bezeichnung|artikel)[\s\|\-\_]*[\n\r]+(?:[-\s\|\_]+[\n\r]+)?',
+            'end_pattern': r'(?i)(?:subtotal|total|summe|total\s+à\s+payer|importe\s+total|total\s+general|total\s+amount)',
+            'row_pattern': r'^\s*([^\n\r]+?)\s+([0-9]+(?:[,\.][0-9]+)?)\s+([$€£¥]?\s*[0-9]+(?:[,\.][0-9]+))\s*$',
+            'columns': [
+                {'name': 'description', 'type': 'str'},
+                {'name': 'quantity', 'type': 'float'},
+                {'name': 'unit_price', 'type': 'currency'}
+            ],
+            'required': ['description', 'quantity', 'unit_price']
+        }    'confidence': 0.8,
             'description': 'Simpler line items with description, quantity, unit price'
         }
     ],

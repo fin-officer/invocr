@@ -48,6 +48,7 @@ def pdf_to_images(
     output_dir: Union[str, Path],
     format: str = "png",
     dpi: int = 300,
+    page_numbers: Optional[List[int]] = None,
 ) -> List[Path]:
     """
     Convert PDF pages to images
@@ -57,6 +58,8 @@ def pdf_to_images(
         output_dir: Directory to save the images
         format: Image format (png, jpg, etc.)
         dpi: Image resolution
+        page_numbers: Optional list of page numbers (0-based) to convert.
+                    If None, converts all pages.
 
     Returns:
         List of paths to the generated images
@@ -67,12 +70,27 @@ def pdf_to_images(
     
     try:
         # Convert PDF to images
-        images = convert_from_path(pdf_path, dpi=dpi)
+        if page_numbers is not None:
+            # Convert only specified pages
+            images = []
+            for page_num in page_numbers:
+                try:
+                    # Convert specific page (1-based index)
+                    img = convert_from_path(pdf_path, dpi=dpi, first_page=page_num+1, last_page=page_num+1)
+                    if img:
+                        images.append(img[0])
+                except Exception as e:
+                    logger.warning(f"Error converting page {page_num}: {e}")
+        else:
+            # Convert all pages
+            images = convert_from_path(pdf_path, dpi=dpi)
         
         # Save images
         image_paths = []
         for i, image in enumerate(images):
-            image_path = output_dir / f"{pdf_path.stem}_page_{i+1}.{format}"
+            # If we have specific page numbers, use them in the filename
+            page_num = page_numbers[i] + 1 if page_numbers is not None else i + 1
+            image_path = output_dir / f"{pdf_path.stem}_page_{page_num}.{format}"
             image.save(str(image_path), format.upper())
             image_paths.append(image_path)
             

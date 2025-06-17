@@ -48,6 +48,27 @@ class PDFProcessor:
         self._page_count: Optional[int] = None
         self._metadata: Optional[Dict[str, Any]] = None
         
+        # Open the PDF file if a path was provided
+        if self.file_path and self.file_path.exists():
+            self.doc = fitz.open(self.file_path)
+    
+    def get_text(self) -> str:
+        """
+        Extract all text from the PDF document.
+        
+        Returns:
+            str: Extracted text from all pages
+        """
+        if not self.doc:
+            raise ValueError("No PDF document loaded. Please provide a valid PDF file.")
+            
+        text_parts = []
+        for page_num in range(len(self.doc)):
+            page = self.doc.load_page(page_num)
+            text_parts.append(page.get_text())
+            
+        return "\n\n".join(text_parts)
+        
     def __enter__(self):
         """Context manager entry."""
         self.open()

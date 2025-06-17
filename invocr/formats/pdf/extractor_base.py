@@ -12,7 +12,7 @@ import re
 import logging
 from datetime import datetime
 
-from ..models import Invoice, InvoiceItem, Party, Address, PaymentTerms
+from .models import Invoice, InvoiceItem, ContactInfo as Party, Address, PaymentInfo as PaymentTerms
 
 # Type variable for extractor configuration
 T = TypeVar('T')

@@ -1,0 +1,52 @@
+{
+  "invoice_number": null,
+  "invoice_date": null,
+  "issue_date": null,
+  "due_date": null,
+  "seller": {
+    "name": null,
+    "tax_id": null,
+    "address": null,
+    "email": null,
+    "phone": null,
+    "registration_number": null,
+    "vat_number": null
+  },
+  "buyer": {
+    "name": null,
+    "tax_id": null,
+    "address": null,
+    "email": null,
+    "phone": null,
+    "registration_number": null,
+    "vat_number": null
+  },
+  "currency": null,
+  "exchange_rate": null,
+  "subtotal": null,
+  "tax_amount": null,
+  "discount_amount": null,
+  "total_amount": null,
+  "amount_paid": null,
+  "amount_due": null,
+  "items": [],
+  "payment_terms": {
+    "due_date": null,
+    "terms": null,
+    "discount_days": null,
+    "discount_amount": null
+  },
+  "payment_method": null,
+  "payment_reference": null,
+  "notes": [],
+  "reference_numbers": [],
+  "purchase_order": null,
+  "confidence": null,
+  "extraction_method": null,
+  "raw_data": {},
+  "metadata": {
+    "extraction_methods": [
+      "rule_based"
+    ]
+  }
+}

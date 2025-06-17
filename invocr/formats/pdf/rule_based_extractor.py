@@ -236,6 +236,20 @@ class RuleBasedExtractor(InvoiceExtractor):
             return obj_class()
         return {}
     
+    def extract_invoice(self, text: str) -> 'Invoice':
+        """Extract invoice data from text.
+        
+        Args:
+            text: Text content to extract invoice data from
+            
+        Returns:
+            Invoice: Extracted invoice data
+        """
+        result = self.extract(text)
+        if result.is_valid():
+            return result.data
+        return Invoice()
+
     def _post_process_invoice(self, invoice: Invoice):
         """Post-process the extracted invoice to fill in derived fields."""
         # Set issue date to invoice date if not specified

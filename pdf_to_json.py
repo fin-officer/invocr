@@ -7,6 +7,7 @@ import json
 import logging
 import tempfile
 from pathlib import Path
+from typing import Optional, Dict, Any, List, Union
 
 # Add the parent directory to the Python path to ensure invocr can be imported
 project_root = os.path.abspath(os.path.dirname(__file__))
@@ -32,8 +33,13 @@ for name in logging.root.manager.loggerDict:
 
 try:
     from invocr.core.converter import UniversalConverter
-except ImportError:
-    print("Error: invocr is not installed. Please install it with:")
+    from invocr.formats.pdf.rule_based_extractor import RuleBasedExtractor
+    from invocr.formats.pdf.models import Invoice
+    from invocr.formats.pdf.config import get_default_rules
+    from invocr.formats.pdf.processor import PDFProcessor
+except ImportError as e:
+    print(f"Error: Failed to import required modules: {e}")
+    print("Please install the required dependencies with:")
     print("poetry install")
     print("or")
     print("pip install -e .")
@@ -48,6 +54,37 @@ except ImportError:
     print("For better results, install invoice2data with:")
     print("poetry add invoice2data")
     INVOICE2DATA_AVAILABLE = False
+
+
+def extract_with_rule_based_extractor(pdf_path: Union[str, Path]) -> Dict[str, Any]:
+    """
+    Extract data from a PDF file using the RuleBasedExtractor.
+    
+    Args:
+        pdf_path: Path to the PDF file
+        
+    Returns:
+        Dictionary containing the extracted data
+    """
+    try:
+        # Initialize the PDF processor and extract text
+        pdf_processor = PDFProcessor(str(pdf_path))
+        text = pdf_processor.get_text()
+        
+        # Initialize the rule-based extractor with default rules
+        rules = get_default_rules()
+        extractor = RuleBasedExtractor(rules=rules)
+        
+        # Extract invoice data
+        invoice = extractor.extract_invoice(text)
+        
+        # Convert to dictionary
+        if hasattr(invoice, 'to_dict'):
+            return invoice.to_dict()
+        return {}
+    except Exception as e:
+        print(f"  Warning: Rule-based extraction failed: {e}")
+        return {}
     
 # Define a function to check if a PDF is valid
 def is_valid_pdf(pdf_path):
@@ -228,9 +265,13 @@ def convert_pdf_to_json(pdf_dir, output_dir=None, languages=None, overwrite=Fals
             # Save JSON file alongside PDF with the same base name
             json_file = pdf_file.with_suffix('.json')
         else:
-            # Save in output directory with relative path preserved
-            rel_path = pdf_file.relative_to(pdf_dir)
-            json_file = output_dir / rel_path.with_suffix('.json')
+            # If input is a single file, use the output directory directly
+            if pdf_file.is_file() and pdf_file.suffix.lower() == '.pdf':
+                json_file = output_dir / f"{pdf_file.stem}.json"
+            else:
+                # Save in output directory with relative path preserved
+                rel_path = pdf_file.relative_to(pdf_dir)
+                json_file = output_dir / rel_path.with_suffix('.json')
             # Create parent directories if they don't exist
             json_file.parent.mkdir(parents=True, exist_ok=True)
         
@@ -252,7 +293,10 @@ def convert_pdf_to_json(pdf_dir, output_dir=None, languages=None, overwrite=Fals
         invocr_json_file = json_file.with_name(f"{json_file.stem}_invocr.json")
         
         try:
-            # Convert PDF to JSON using invocr with better error handling
+            # Extract data using RuleBasedExtractor first
+            rule_based_data = extract_with_rule_based_extractor(pdf_file)
+            
+            # Convert PDF to JSON using the original converter as fallback
             invocr_data = None
             try:
                 result = converter.convert(pdf_file, invocr_json_file)
@@ -261,10 +305,28 @@ def convert_pdf_to_json(pdf_dir, output_dir=None, languages=None, overwrite=Fals
                 if invocr_json_file.exists():
                     with open(invocr_json_file, 'r') as f:
                         invocr_data = json.load(f)
+                        
+                # If we have rule-based data, merge it with the invocr data
+                if rule_based_data:
+                    print("  Successfully extracted data using RuleBasedExtractor")
+                    if invocr_data and isinstance(invocr_data, dict):
+                        # Merge rule-based data into invocr data
+                        invocr_data.update({"rule_based_data": rule_based_data})
+                        invocr_data["metadata"] = invocr_data.get("metadata", {})
+                        invocr_data["metadata"]["extraction_methods"] = ["rule_based", "invocr"]
+                    else:
+                        # Use rule-based data as primary if invocr extraction failed
+                        invocr_data = rule_based_data
+                        invocr_data["metadata"] = {"extraction_methods": ["rule_based"]}
             except Exception as e:
                 print(f"  Warning: invocr extraction failed: {e}")
-                # Create empty invocr data if extraction failed
-                invocr_data = {"document": {}, "metadata": {"extraction_method": "invocr_failed"}}
+                # Use rule-based data if available, otherwise create empty data
+                if rule_based_data:
+                    print("  Using rule-based extraction results")
+                    invocr_data = rule_based_data
+                    invocr_data["metadata"] = {"extraction_methods": ["rule_based"]}
+                else:
+                    invocr_data = {"document": {}, "metadata": {"extraction_methods": ["failed"]}}
             
             # Extract data using invoice2data if available
             invoice2data_data = None
