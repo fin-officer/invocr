@@ -68,12 +68,9 @@ def pdf_to_images(
     pdf_path = Path(pdf_path)
     output_dir = Path(output_dir)
     
-    # Create output directory with error handling for race conditions
+    # Create output directory if it doesn't exist
     try:
         output_dir.mkdir(parents=True, exist_ok=True)
-    except FileExistsError:
-        # Directory was created by another process
-        pass
     except Exception as e:
         logger.error(f"Failed to create output directory {output_dir}: {e}")
         return []

@@ -58,6 +58,15 @@ class UniversalConverter:
         Returns:
             Conversion result with metadata
         """
+        # Defensive: if input_path is a file and output_path is a file, and input_path == output_path, raise clear error
+        if (
+            isinstance(input_path, (str, Path)) and isinstance(output_path, (str, Path))
+            and Path(input_path).resolve() == Path(output_path).resolve()
+        ):
+            raise ValueError(
+                f"Input and output paths must be different. Got the same file: {input_path}"
+            )
+
         try:
             # Auto-detect source format
             if source_format == "auto":
@@ -129,9 +138,13 @@ class UniversalConverter:
         use_ocr: bool = True,
     ) -> Dict[str, any]:
         """Convert PDF to JSON (PDF → JSON)"""
+        # Initialize PDF processor with the current PDF path
+        pdf_path = Path(pdf_path).resolve()
+        pdf_processor = PDFProcessor(str(pdf_path))
+        
         # Try direct text extraction first
         try:
-            text_data = self.pdf_processor.extract_text(pdf_path)
+            text_data = pdf_processor.extract_text(pdf_path)
 
             if text_data and len(text_data.strip()) > 50:
                 # Direct text extraction successful
@@ -154,8 +167,10 @@ class UniversalConverter:
             # Fallback to OCR
             logger.info("Falling back to OCR extraction")
             with tempfile.TemporaryDirectory() as temp_dir:
-                # Convert PDF to images
-                images = self.pdf_processor.to_images(pdf_path, temp_dir)
+                # Convert PDF to images - use the temp directory for output
+                images = pdf_processor.to_images(
+                    str(Path(temp_dir).resolve())  # Output directory for images
+                )
 
                 # Process first page (or combine multiple pages)
                 if images:
