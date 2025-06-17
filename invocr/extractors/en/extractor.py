@@ -77,6 +77,23 @@ class EnglishExtractor(DataExtractor):
         """Detect the language of the text."""
         return "en"
 
+    def extract_invoice_data(self, text: str, document_type: str = "invoice") -> dict:
+        language = self._detect_language(text)
+        data = {}
+        data.update(self._extract_basic_info(text, language))
+        parties = self._extract_parties(text, language)
+        data["seller"] = parties.get("seller", {})
+        data["buyer"] = parties.get("buyer", {})
+        data["items"] = self._extract_items(text, language)
+        data["totals"] = self._extract_totals(text, language)
+        data.update(self._extract_payment_info(text, language))
+        data["_metadata"] = {
+            "extraction_timestamp": datetime.utcnow().isoformat(),
+            "document_type": document_type,
+            "language": language,
+        }
+        return data
+
     def extract(self, text: str, language: str) -> Dict[str, Any]:
         """Extract all available information from the document."""
         result = self._extract_basic_info(text, language)
