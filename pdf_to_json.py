@@ -119,55 +119,73 @@ def merge_json_data(invocr_data, invoice2data_data):
     
     return merged_data
 
-def convert_pdf_to_json(pdf_dir, output_dir, languages=None, overwrite=False, month=None, year=None, use_invoice2data=True):
+def convert_pdf_to_json(pdf_dir, output_dir=None, languages=None, overwrite=False, month=None, year=None, use_invoice2data=True, save_alongside=False):
     """
     Convert PDF files to JSON using invocr and optionally invoice2data.
     
     Args:
         pdf_dir (str): Directory containing PDF files
-        output_dir (str): Directory to save JSON files
+        output_dir (str, optional): Directory to save JSON files. Not used if save_alongside is True.
         languages (list): List of languages to use for extraction
         overwrite (bool): Whether to overwrite existing JSON files
         month (str): Month to filter by (format: MM)
         year (str): Year to filter by (format: YYYY)
         use_invoice2data (bool): Whether to use invoice2data for extraction
+        save_alongside (bool): If True, save JSON files alongside PDFs with the same base name
         
     Returns:
         tuple: (success_count, failure_count) - Number of files successfully converted and failed
     """
     pdf_dir = Path(pdf_dir)
-    output_dir = Path(output_dir)
     
-    # Create output directory if it doesn't exist
-    output_dir.mkdir(parents=True, exist_ok=True)
+    # Handle output directory if not saving alongside PDFs
+    if not save_alongside and output_dir:
+        output_dir = Path(output_dir)
+        # Create output directory if it doesn't exist
+        output_dir.mkdir(parents=True, exist_ok=True)
     
     # Get list of PDF files
     pdf_files = []
-    for root, _, files in os.walk(pdf_dir):
-        for file in files:
-            if file.lower().endswith('.pdf'):
-                pdf_path = Path(root) / file
-                
-                # Filter by month and year if specified
-                if month or year:
-                    try:
-                        # Get file modification time
-                        mtime = os.path.getmtime(pdf_path)
-                        file_time = time.localtime(mtime)
-                        file_month = time.strftime('%m', file_time)
-                        file_year = time.strftime('%Y', file_time)
-                        
-                        # Skip if month doesn't match
-                        if month and file_month != month:
-                            continue
-                        
-                        # Skip if year doesn't match
-                        if year and file_year != year:
-                            continue
-                    except Exception as e:
-                        print(f"  Warning: Failed to get modification time for {pdf_path}: {e}")
-                
-                pdf_files.append(pdf_path)
+    print(f"DEBUG: Looking for PDF files in {pdf_dir} (exists: {pdf_dir.exists()})")
+    
+    # Check if pdf_dir is a file
+    if pdf_dir.is_file() and pdf_dir.suffix.lower() == '.pdf':
+        print(f"DEBUG: pdf_dir is a single PDF file: {pdf_dir}")
+        pdf_files.append(pdf_dir)
+    else:
+        # Walk directory structure
+        for root, dirs, files in os.walk(pdf_dir):
+            print(f"DEBUG: Scanning directory: {root}, found {len(files)} files")
+            for file in files:
+                if file.lower().endswith('.pdf'):
+                    pdf_path = Path(root) / file
+                    print(f"DEBUG: Found PDF: {pdf_path}")
+                    
+                    # Filter by month and year if specified
+                    if month or year:
+                        try:
+                            # Get file modification time
+                            mtime = os.path.getmtime(pdf_path)
+                            file_time = time.localtime(mtime)
+                            file_month = time.strftime('%m', file_time)
+                            file_year = time.strftime('%Y', file_time)
+                            
+                            print(f"DEBUG: File {pdf_path} has month={file_month}, year={file_year}")
+                            print(f"DEBUG: Filtering with month={month}, year={year}")
+                            
+                            # Skip if month doesn't match
+                            if month and file_month != month:
+                                print(f"DEBUG: Skipping {pdf_path} - month {file_month} doesn't match {month}")
+                                continue
+                            
+                            # Skip if year doesn't match
+                            if year and file_year != year:
+                                print(f"DEBUG: Skipping {pdf_path} - year {file_year} doesn't match {year}")
+                                continue
+                        except Exception as e:
+                            print(f"  Warning: Failed to get modification time for {pdf_path}: {e}")
+                    
+                    pdf_files.append(pdf_path)
     
     if not pdf_files:
         print(f"No PDF files found in {pdf_dir}")
@@ -197,12 +215,16 @@ def convert_pdf_to_json(pdf_dir, output_dir, languages=None, overwrite=False, mo
     skipped_count = 0
     
     for i, pdf_file in enumerate(pdf_files, 1):
-        # Calculate relative path to maintain directory structure
-        rel_path = pdf_file.relative_to(pdf_dir)
-        json_file = output_dir / rel_path.with_suffix('.json')
-        
-        # Create parent directories if they don't exist
-        json_file.parent.mkdir(parents=True, exist_ok=True)
+        # Determine JSON output path based on save_alongside flag
+        if save_alongside:
+            # Save JSON file alongside PDF with the same base name
+            json_file = pdf_file.with_suffix('.json')
+        else:
+            # Save in output directory with relative path preserved
+            rel_path = pdf_file.relative_to(pdf_dir)
+            json_file = output_dir / rel_path.with_suffix('.json')
+            # Create parent directories if they don't exist
+            json_file.parent.mkdir(parents=True, exist_ok=True)
         
         # Skip if JSON file already exists and overwrite is False
         if json_file.exists() and not overwrite:
@@ -303,6 +325,8 @@ if __name__ == "__main__":
     parser.add_argument('--year', type=int, help='Year to process (e.g., 2024)')
     parser.add_argument('--no-invoice2data', action='store_true', 
                         help='Disable invoice2data extraction (use only invocr)')
+    parser.add_argument('--save-alongside', action='store_true',
+                        help='Save JSON files alongside PDFs with the same base name')
     
     args = parser.parse_args()
     
@@ -336,7 +360,8 @@ if __name__ == "__main__":
             overwrite=args.overwrite,
             month=month_str,
             year=year_str,
-            use_invoice2data=not args.no_invoice2data
+            use_invoice2data=not args.no_invoice2data,
+            save_alongside=args.save_alongside
         )
     else:
         print(f"Processing PDF files from: {args.pdf_dir}")
@@ -348,6 +373,7 @@ if __name__ == "__main__":
             output_dir=args.output_dir,
             languages=args.languages,
             overwrite=args.overwrite,
+            save_alongside=args.save_alongside,
             month=month_str,
             year=year_str,
             use_invoice2data=not args.no_invoice2data
