@@ -10,11 +10,8 @@ from typing import Optional
 
 from invocr.utils.logger import get_logger
 from .commands import (
-    convert_command,
-    extract_command,
-    batch_command,
-    validate_command,
-    config_command
+    convert_command, extract_command, batch_command, validate_command, config_command,
+    debug_command, ocr_text_command, workflow_command
 )
 
 logger = get_logger(__name__)
@@ -37,6 +34,9 @@ cli.add_command(extract_command)
 cli.add_command(batch_command)
 cli.add_command(validate_command)
 cli.add_command(config_command)
+cli.add_command(debug_command)
+cli.add_command(ocr_text_command)
+cli.add_command(workflow_command)
 
 
 def main():

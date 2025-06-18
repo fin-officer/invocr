@@ -19,6 +19,12 @@ from .core.converter import (
 from .core.extractor import DataExtractor, create_extractor
 from .core.ocr import OCREngine, create_ocr_engine
 
+# Import adapters for modularized packages
+from .adapters.utils_adapter import *
+from .adapters.validation_adapter import *
+from .adapters.extraction_adapter import *
+from .adapters.detection_adapter import *
+
 # Import format handlers
 from .formats.html_handler import HTMLHandler
 from .formats.image import ImageProcessor

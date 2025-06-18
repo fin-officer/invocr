@@ -76,9 +76,14 @@ SUBTOTAL_PATTERNS = [
 
 # Patterns for finding tax amount
 TAX_AMOUNT_PATTERNS = [
-    r"(?i)(?:tax|vat|gst|sales\s+tax)[^$€£\d]{1,100}([€$£]?\s*\d+(?:[,.]\d+)?)",
-    r"(?i)(?:tax|vat|gst|sales\s+tax)[^\d]{0,10}([€$£]?\s*\d+(?:[,.]\d+)?)",
-    r"(?i)(?:tax\s+amount|vat\s+amount)[^\d]{0,10}([€$£]?\s*\d+(?:[,.]\d+)?)",
+    # Improved patterns to avoid matching VAT IDs
+    # Look for monetary format (with decimal places) and currency symbols
+    r"(?i)(?:tax|vat|gst|sales\s+tax)\s+(?:amount)?:?\s*([€$£]?\s*\d+[.,]\d{2})",
+    r"(?i)(?:tax|vat|gst|sales\s+tax)\s+(?:total)?:?\s*([€$£]?\s*\d+[.,]\d{2})",
+    # Match tax amount with currency symbols and require decimal places
+    r"(?i)(?:tax|vat|gst)\s+amount:?\s*([€$£]\s*\d+[.,]\d{2}|\d+[.,]\d{2}\s*[€$£])",
+    # Match tax with % nearby to avoid VAT IDs
+    r"(?i)(?:tax|vat|gst)\s+(?:\d+%|\d+[.,]\d+%)\s*:?\s*([€$£]?\s*\d+[.,]\d{2})",
 ]
 
 # Patterns for finding tax rate

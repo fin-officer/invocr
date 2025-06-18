@@ -39,6 +39,11 @@ pypdf2 = "^3.0.1"
 imgkit = "^1.2.3"
 tox = "^4.27.0"
 jsonschema = "^4.24.0"
+# Nowe modularyzowane pakiety
+invutil = {path = "../invutil", develop = true}
+valider = {path = "../valider", develop = true}
+dextra = {path = "../dextra", develop = true}
+dotect = {path = "../dotect", develop = true}
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.3"

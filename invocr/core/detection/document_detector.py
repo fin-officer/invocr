@@ -205,6 +205,39 @@ class DocumentDetector:
                     best_confidence = type_confidence
         
         return best_type, best_confidence, all_results
+    
+    def detect_document_type(self, text: str, metadata: Optional[Dict[str, Any]] = None) -> Tuple[str, float, Dict[str, Any]]:
+        """
+        Detect document type and return detailed information.
+        
+        This method is used by the simple_debug.py script and returns a tuple of
+        (document_type, confidence, features) for compatibility.
+        
+        Args:
+            text: Document text content
+            metadata: Optional document metadata
+            
+        Returns:
+            Tuple of (document_type, confidence, features)
+        """
+        doc_type, confidence, all_results = self.detect(text, metadata)
+        
+        # Extract features from text for debugging
+        features = {}
+        
+        # Check for common document features
+        features["has_invoice_keywords"] = any(keyword.lower() in text.lower() 
+                                           for keyword in ["invoice", "faktura", "rechnung"])
+        features["has_receipt_keywords"] = any(keyword.lower() in text.lower() 
+                                           for keyword in ["receipt", "paragon", "quittung"])
+        features["has_vat_references"] = any(vat_term in text.lower() 
+                                          for vat_term in ["vat", "tax", "mwst", "ust"])
+        
+        # Add metadata to features
+        if metadata:
+            features["metadata"] = metadata
+            
+        return doc_type, confidence, features
 
 
 # Create and configure default document detector

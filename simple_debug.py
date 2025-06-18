@@ -147,9 +147,8 @@ def main():
             # Try validation if available
             try:
                 log_step(step, "Validation", "Attempting to validate extracted data")
-                from invocr.core.validators.extraction_validator import ExtractionValidator
-                validator = ExtractionValidator()
-                validation_results = validator.validate(invoice_data, ocr_text)
+                from invocr.core.validators.extraction_validator import validate_extraction
+                validation_results = validate_extraction(invoice_data, ocr_text)
                 
                 validation_summary = {
                     "is_valid": validation_results.get("is_valid", False),

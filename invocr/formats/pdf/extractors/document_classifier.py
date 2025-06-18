@@ -160,6 +160,25 @@ class DocumentClassifier:
         return any(re.search(pattern, text, re.IGNORECASE | re.MULTILINE) 
                   for pattern in table_patterns)
     
+    def detect_document_type(self, text: str, metadata: Optional[Dict[str, Any]] = None) -> Tuple[str, float, Dict[str, Any]]:
+        """
+        Detect the document type based on its features.
+        
+        This method is used by the simple_debug.py script and returns a tuple of
+        (document_type, confidence, features) for compatibility.
+        
+        Args:
+            text: The document text content
+            metadata: Optional document metadata
+            
+        Returns:
+            Tuple of (document_type, confidence, features)
+        """
+        doc_type, attributes = self.classify_document(text, metadata)
+        confidence = attributes.get('confidence', 0.5)
+        features = attributes.get('features', {})
+        return doc_type, confidence, attributes
+    
     def classify_document(self, text: str, metadata: Optional[Dict[str, Any]] = None) -> Tuple[str, Dict[str, Any]]:
         """
         Classify the document based on its features.

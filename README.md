@@ -52,6 +52,20 @@
 | **Bank Statements** | Account statements | Transactions, balances |
 | **Custom** | Any document | Configurable templates |
 
+
+invutil - zawiera najbardziej generyczne funkcje, które mają najmniej zależności 
+git@github.com:fin-officer/invutil.git
+
+valider - mechanizmy walidacji mają jasno określone interfejsy
+git@github.com:fin-officer/valider.git
+
+dextra - wymaga wcześniejszego wyodrębnienia Utils i OCR
+git@github.com:fin-officer/dextra.git
+
+dotect - zależy od niektórych komponentów Utils
+git@github.com:fin-officer/dotect.git
+
+
 ## 📚 Documentation
 
 - [Examples](./docs/examples.md) - Comprehensive usage examples
@@ -68,7 +82,7 @@
 poetry run invocr convert invoice.pdf invoice.json
 
 
-poetry run python invocr convert ./2024.11/attachments/invoice-25417.pdf --output-dir ./2024.11/attachments/invoice-25417.json
+poetry run invocr convert ./2024.11/attachments/invoice-25417.pdf ./2024.11/attachments/invoice-25417.json
 
 # Process image with specific languages
 poetry run invocr img2json receipt.jpg --languages en,pl,de
@@ -80,23 +94,23 @@ poetry run invocr serve --port 8001
 poetry run invocr batch ./2024.11/attachments/ ./2024.11/attachments/ --format json
 ```
 
-### Helper Scripts
+### Additional CLI Commands
 
-#### 1. Process Single PDF to JSON
+#### 1. Process PDF to JSON with Specialized Extraction
 ```bash
-# Convert a single PDF to JSON
-poetry run python pdf2json.py path/to/input.pdf --output path/to/output.json
-poetry run python pdf2json.py
+# Convert a single PDF to JSON with specialized extraction
+poetry run invocr pdf2json path/to/input.pdf --output path/to/output.json
 ```
 
 #### 2. Batch Process Multiple PDFs
 ```bash
 # Process all PDFs in a directory
-poetry run python process_pdfs.py --input-dir ./2024.09/attachments/ --output-dir ./2024.09/attachments/
-poetry run python process_pdfs.py --input-dir ./2024.10/attachments/ --output-dir ./2024.10/attachments/
-poetry run python process_pdfs.py --input-dir ./2024.11/attachments/ --output-dir ./2024.11/attachments/
+poetry run invocr batch ./2024.09/attachments/ ./2024.09/attachments/ --format json
+poetry run invocr batch ./2024.10/attachments/ ./2024.10/attachments/ --format json
+poetry run invocr batch ./2024.11/attachments/ ./2024.11/attachments/ --format json
 
-poetry run python process_invocr.py --input-dir ./2024.11/attachments/ --output-dir ./2024.11/attachments/
+# Process with complete workflow (OCR, detection, extraction, validation)
+poetry run invocr workflow ./2024.11/attachments/ --output-dir ./2024.11/attachments/
 
 # Available options:
 # --input-dir: Directory containing PDF files (default: 2024.09/attachments)
@@ -577,19 +591,22 @@ poetry run python pdf_to_json.py --extract-images --input document.pdf --output-
 poetry run python process_pdfs.py --input scan.png --output data.json --doc-type invoice
 
 # Debug invoice extraction
-poetry run python debug_extraction.py --input invoice.pdf
+poetry run invocr debug invoice.pdf
+
+# View OCR text from a document
+poetry run invocr ocr-text invoice.pdf
 
 # Batch processing
-poetry run python process_pdfs.py --input-dir ./input_files/ --output-dir ./output/ --format json
+poetry run invocr batch ./input_files/ ./output/ --format json
 
 # View OCR text extracted from PDF
-poetry run python view_ocr_text.py --input document.pdf
+poetry run invocr ocr-text document.pdf
 
 # Test invoice extraction
-poetry run python test_invoice_extraction.py
+poetry run invocr validate --input-file path/to/invoice.json
 
 # Debug receipt extraction
-poetry run python debug_receipt.py
+poetry run invocr debug --doc-type receipt path/to/receipt.pdf
 ```
 
 ## 🧩 Modular Extraction System

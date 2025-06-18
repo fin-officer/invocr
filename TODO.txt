@@ -27,18 +27,21 @@
 ## 2. Code Organization & CLI Interface
 
 ### 2.1. Script Migration
-- [ ] Move standalone scripts to organized package structure:
-  - [ ] `invocr/cli/__init__.py` - CLI entry point
-  - [ ] `invocr/cli/commands/` - Individual command modules
-  - [ ] `invocr/cli/common.py` - Shared CLI utilities
+- [x] Move standalone scripts to organized package structure:
+  - [x] `invocr/cli/__init__.py` - CLI entry point
+  - [x] `invocr/cli/commands/` - Individual command modules
+  - [x] `invocr/cli/common.py` - Shared CLI utilities
 
 ### 2.2. Command Line Interface Enhancement
 - [x] Create `invocr/__main__.py` for `poetry run invocr` commands
-- [ ] Implement subcommands in CLI:
-  - [ ] `invocr convert` - Convert documents between formats
-  - [ ] `invocr extract` - Extract data from documents
-  - [ ] `invocr batch` - Process multiple files
-  - [ ] `invocr validate` - Validate extraction results
+- [x] Implement subcommands in CLI:
+  - [x] `invocr convert` - Convert documents between formats
+  - [x] `invocr extract` - Extract data from documents
+  - [x] `invocr batch` - Process multiple files
+  - [x] `invocr validate` - Validate extraction results
+  - [x] `invocr debug` - Debug extraction process
+  - [x] `invocr ocr-text` - View OCR text from documents
+  - [x] `invocr workflow` - End-to-end invoice processing workflow
 
 ### 2.3. Fix Import Chain
 - [ ] Update `formats/pdf/__init__.py` re-exports to fix `extract_document_number` and other import errors
@@ -108,32 +111,38 @@
 ## 8. Intelligent Extraction & Validation
 
 ### 8.1. Dynamic Decision Tree Implementation
-- [ ] Create document type classifier
-- [ ] Implement dynamic extractor selection based on document type
-- [ ] Build workflow orchestration using previously written generic functions
+- [x] Create document type classifier
+- [x] Implement dynamic extractor selection based on document type
+- [x] Build workflow orchestration using previously written generic functions
+- [x] Integrate workflow into CLI command system
 - [ ] Design fallback mechanisms for unrecognized document types
+- [ ] Improve document type classification accuracy (reduce 'unknown' results)
 
 ### 8.2. Specialized Extraction Functions
-- [ ] Develop regex-based extractors with strict validation
-- [ ] Create unit tests for all extraction functions
-- [ ] Implement ML/LLM-based extraction for complex documents
-- [ ] Add step-by-step extraction logging for debugging and validation
+- [x] Develop regex-based extractors with strict validation
+- [x] Create unit tests for all extraction functions
+- [x] Implement ML/LLM-based extraction for complex documents
+- [x] Add step-by-step extraction logging for debugging and validation
 
 ### 8.3. OCR and HTML Generation
-- [ ] Generate HTML from PDF with embedded OCR text
-- [ ] Split each page into 4 quadrants (top/bottom, left/right) for targeted analysis
+- [x] Generate HTML from PDF with embedded OCR text
+- [x] Split each page into 4 quadrants (top/bottom, left/right) for targeted analysis
 - [ ] Implement image analysis for table detection and extraction
 - [ ] Create specialized extractors for different document regions
 
 ### 8.4. Data Validation Framework
-- [ ] Implement business rule validation (percentage limits, rounding rules)
-- [ ] Add context-aware cross-field consistency checks
+- [x] Implement business rule validation (percentage limits, rounding rules)
+- [x] Add context-aware cross-field consistency checks
 - [ ] Create validation for specific document types (invoices, receipts, etc.)
 - [ ] Implement automatic correction for common formatting issues
+- [ ] Fix tax_amount extraction issues (prevent VAT ID misinterpretation)
+- [ ] Improve seller information extraction accuracy
+- [ ] Tune validation confidence thresholds for better accuracy reporting
+- [ ] Add robust error handling for extraction edge cases
 
 ### 8.5. Machine Learning Integration
-- [ ] Integrate ML models for document classification
-- [ ] Implement LLM-based extraction for unstructured text
+- [x] Integrate ML models for document classification
+- [x] Implement LLM-based extraction for unstructured text
 - [ ] Create feedback loop for continuous model improvement
 - [ ] Add confidence scores for extracted values
 

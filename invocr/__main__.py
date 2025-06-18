@@ -13,7 +13,11 @@ from invocr.cli.commands import (
     extract_command,
     batch_command,
     validate_command,
-    config_command
+    config_command,
+    debug_command,
+    ocr_text_command,
+    workflow_command,
+    pdf2json_command
 )
 
 # Initialize logger
@@ -35,6 +39,10 @@ cli.add_command(extract_command)
 cli.add_command(batch_command)
 cli.add_command(validate_command)
 cli.add_command(config_command)
+cli.add_command(debug_command)
+cli.add_command(ocr_text_command)
+cli.add_command(workflow_command)
+cli.add_command(pdf2json_command)
 
 def main():
     """Main entry point for CLI."""

@@ -9,7 +9,11 @@ from .commands import (
     extract_command,
     batch_command,
     validate_command,
-    config_command
+    config_command,
+    debug_command,
+    ocr_text_command,
+    workflow_command,
+    pdf2json_command
 )
 
 __all__ = [
@@ -17,5 +21,9 @@ __all__ = [
     "extract_command",
     "batch_command",
     "validate_command",
-    "config_command"
+    "config_command",
+    "debug_command",
+    "ocr_text_command",
+    "workflow_command",
+    "pdf2json_command"
 ]
