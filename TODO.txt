@@ -105,16 +105,41 @@
 - [ ] Fix `extract_document_number` import error in `formats/pdf/__init__.py`
 - [ ] Verify `invocr convert` CLI works end-to-end
 
+## 8. Intelligent Extraction & Validation
 
-Przeanalizuj projekt, aby wykrozystac wysepcjalizowane funkcje 
-w zaleznosic od typu dokumentu, stworz dynamiczne drzewo deczyzynen 
-zrob refaktoryzacje, uzywaj generycznych funkcji i tworz workflow 
-przez python rezuywajac funkcji wczesnie napisanych , 
-tworz wyspecjalziowane funkcje, ktore uzywają roznych metod, m.in. 
-regex, ale ktore sa walidowalne i maja unit testy, aby bylo pewne 
-co robia i miały  ustrukturyzowane uzycie w zaleznosci od wykrytych danych, 
-powinno byc dynamiczne dopasowywanie funkcji wyodrebniajacych,
- na bazie pdf2text powinno byc walidowanie, 
- czy dane zostaly porpawnie wyekstrachowane jesli istnieja
+### 8.1. Dynamic Decision Tree Implementation
+- [ ] Create document type classifier
+- [ ] Implement dynamic extractor selection based on document type
+- [ ] Build workflow orchestration using previously written generic functions
+- [ ] Design fallback mechanisms for unrecognized document types
 
- stworz wyspecjalizowane funkcje i dynamiczne drzewo decyzyjne w celu utworzenia oczekiwanego dokumentu na podstawie danych z pdf, pozwol na generowanie z tekstu całej fakturyn ap odstawie wyesktrachowanych danych, uzyj inteligentnego wykrywania podczas analziy krok po kroku typy i formatu danych z uzyciem Machine learning i LLM, aby szybko i skutecznie wykryc z obrazu poszczegolne elementy jak rttabele, dane adresowe, dane faktury, itd, zrob analzie obrazu i dopiero ekstrachuj dane, pokaz krok po kroku podczas generowania danych z pdf co robi funkcja ekstrachująca, aby było możliwe łatwe wyegzekwowanie i badanie danych, stwórz z pdf plik html, ktory bedzie zawieral wszystkie strony i ocr z kazdej strony przedzielonej na 4 czści gora dol, lewo prawo, w zaleznosci od formatu bedzie roznie analziowany pdf, wygeneruj odpowiednie etapy do analizy i tworz dynamiczne ekstrakcje danych
+### 8.2. Specialized Extraction Functions
+- [ ] Develop regex-based extractors with strict validation
+- [ ] Create unit tests for all extraction functions
+- [ ] Implement ML/LLM-based extraction for complex documents
+- [ ] Add step-by-step extraction logging for debugging and validation
+
+### 8.3. OCR and HTML Generation
+- [ ] Generate HTML from PDF with embedded OCR text
+- [ ] Split each page into 4 quadrants (top/bottom, left/right) for targeted analysis
+- [ ] Implement image analysis for table detection and extraction
+- [ ] Create specialized extractors for different document regions
+
+### 8.4. Data Validation Framework
+- [ ] Implement business rule validation (percentage limits, rounding rules)
+- [ ] Add context-aware cross-field consistency checks
+- [ ] Create validation for specific document types (invoices, receipts, etc.)
+- [ ] Implement automatic correction for common formatting issues
+
+### 8.5. Machine Learning Integration
+- [ ] Integrate ML models for document classification
+- [ ] Implement LLM-based extraction for unstructured text
+- [ ] Create feedback loop for continuous model improvement
+- [ ] Add confidence scores for extracted values
+
+### 8.6. Complete Document Generation
+- [ ] Create invoice generator from extracted data
+- [ ] Implement templates for different document types
+- [ ] Add validation before document generation
+- [ ] Support multiple output formats (PDF, JSON, CSV)
+
