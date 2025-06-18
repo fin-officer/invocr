@@ -11,11 +11,11 @@ import click
 import logging
 from pathlib import Path
 
-from invocr.utils.logger import get_logger
-from invocr.utils.ocr import extract_text
-from invocr.core.detection.document_detector import DocumentDetector
-from invocr.core.detection.extractor_selector import ExtractorSelector
-from invocr.core.validators.extraction_validator import validate_extraction
+# Używamy adapterów zamiast bezpośrednich importów
+from invocr.adapters.utils_adapter import get_logger, extract_text
+from invocr.adapters.detection_adapter import DocumentDetector
+from invocr.adapters.extraction_adapter import ExtractorSelector
+from invocr.adapters.validation_adapter import validate_extraction
 from ..common import load_yaml_config
 
 logger = get_logger(__name__)

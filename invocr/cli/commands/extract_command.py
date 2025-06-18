@@ -82,7 +82,7 @@ def extract_command(input_file, output_file, config_file, batch, languages, save
             logger.info(f"Found {len(pdf_files)} PDF files to process")
             
             # Process all files in batch
-            results = batch_process_invoices(
+            results = batch_process(
                 file_paths=pdf_files,
                 output_dir=output_file,
                 ocr_languages=lang_list,
@@ -109,7 +109,7 @@ def extract_command(input_file, output_file, config_file, batch, languages, save
             logger.info(f"Processing file: {input_file}")
             
             # Process the file through our workflow
-            result = process_invoice(
+            result = process_document(
                 file_path=input_file,
                 output_path=output_file,
                 ocr_languages=lang_list,

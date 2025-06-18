@@ -12,9 +12,10 @@ import click
 from pathlib import Path
 from typing import List, Dict, Any
 
-from invocr.utils.logger import get_logger
-from invocr.core.workflow import ExtractionWorkflow
-from invocr.formats.pdf.ocr_html_generator import pdf_to_html_with_quadrants as generate_html_with_ocr
+# Używamy adapterów zamiast bezpośrednich importów
+from invocr.adapters.utils_adapter import get_logger
+from invocr.adapters.extraction_adapter import ExtractionWorkflow
+from invocr.adapters.utils_adapter import generate_html_with_ocr  # Zakładamy, że funkcja została przeniesiona do invutil
 from ..common import load_yaml_config
 
 logger = get_logger(__name__)
