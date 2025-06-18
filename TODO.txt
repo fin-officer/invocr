@@ -116,3 +116,5 @@ co robia i miały  ustrukturyzowane uzycie w zaleznosci od wykrytych danych,
 powinno byc dynamiczne dopasowywanie funkcji wyodrebniajacych,
  na bazie pdf2text powinno byc walidowanie, 
  czy dane zostaly porpawnie wyekstrachowane jesli istnieja
+
+ stworz wyspecjalizowane funkcje i dynamiczne drzewo decyzyjne w celu utworzenia oczekiwanego dokumentu na podstawie danych z pdf, pozwol na generowanie z tekstu całej fakturyn ap odstawie wyesktrachowanych danych, uzyj inteligentnego wykrywania podczas analziy krok po kroku typy i formatu danych z uzyciem Machine learning i LLM, aby szybko i skutecznie wykryc z obrazu poszczegolne elementy jak rttabele, dane adresowe, dane faktury, itd, zrob analzie obrazu i dopiero ekstrachuj dane, pokaz krok po kroku podczas generowania danych z pdf co robi funkcja ekstrachująca, aby było możliwe łatwe wyegzekwowanie i badanie danych, stwórz z pdf plik html, ktory bedzie zawieral wszystkie strony i ocr z kazdej strony przedzielonej na 4 czści gora dol, lewo prawo, w zaleznosci od formatu bedzie roznie analziowany pdf, wygeneruj odpowiednie etapy do analizy i tworz dynamiczne ekstrakcje danych
