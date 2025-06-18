@@ -169,27 +169,42 @@ class DocumentDetector:
         """
         best_type = "unknown"
         best_confidence = 0.0
+        all_results = {}
         
         for doc_type, type_rules in self.rules.items():
             # Apply all rules for this document type
-            confidence_scores = [rule.matches(text, metadata) for rule in type_rules]
+            rule_results = []
+            for rule in type_rules:
+                score = rule.matches(text, metadata)
+                rule_results.append({
+                    'rule_name': rule.name,
+                    'confidence': score,
+                    'priority': rule.priority
+                })
+                logger.debug(f"Rule '{rule.name}' for '{doc_type}' returned confidence: {score:.2f}")
             
             # Calculate overall confidence for this document type
-            if confidence_scores:
+            if rule_results:
                 # Weight by rule priority
-                weighted_scores = [score * (rule.priority + 1) for score, rule in zip(confidence_scores, type_rules)]
-                total_weights = sum(rule.priority + 1 for rule in type_rules)
+                weighted_scores = [result['confidence'] * (result['priority'] + 1) for result in rule_results]
+                total_weights = sum(rule['priority'] + 1 for rule in rule_results)
                 
                 type_confidence = sum(weighted_scores) / total_weights if total_weights > 0 else 0.0
                 
-                logger.debug(f"Document type '{doc_type}' confidence: {type_confidence:.2f}")
+                logger.info(f"Document type '{doc_type}' overall confidence: {type_confidence:.2f}")
+                
+                # Store detailed results
+                all_results[doc_type] = {
+                    'confidence': type_confidence,
+                    'rules': rule_results
+                }
                 
                 # Update best match if confidence is higher
                 if type_confidence > best_confidence:
                     best_type = doc_type
                     best_confidence = type_confidence
         
-        return best_type, best_confidence
+        return best_type, best_confidence, all_results
 
 
 # Create and configure default document detector
@@ -240,7 +255,7 @@ credit_patterns = [
 default_detector.add_rule("credit_note", PatternRule("credit_text", credit_patterns, priority=8, min_matches=2))
 
 
-def detect_document_type(text: str, metadata: Optional[Dict[str, Any]] = None) -> str:
+def detect_document_type(text: str, metadata: Optional[Dict[str, Any]] = None) -> Tuple[str, float, Dict[str, Any]]:
     """
     Detect document type using the default detector.
     
@@ -249,8 +264,25 @@ def detect_document_type(text: str, metadata: Optional[Dict[str, Any]] = None) -
         metadata: Optional document metadata
         
     Returns:
-        Detected document type
+        Tuple of (document_type, confidence_score, detection_features)
     """
-    doc_type, confidence = default_detector.detect(text, metadata)
+    doc_type, confidence, features = default_detector.detect(text, metadata)
     logger.info(f"Detected document type: {doc_type} (confidence: {confidence:.2f})")
-    return doc_type
+    
+    # Extract language information
+    from invocr.utils.ocr import get_document_language_confidence
+    language_scores = get_document_language_confidence(text)
+    primary_language = max(language_scores.items(), key=lambda x: x[1])[0]
+    
+    # Add language detection to features
+    features['language'] = {
+        'primary': primary_language,
+        'scores': language_scores
+    }
+    
+    # Analyze document structure
+    from invocr.utils.ocr import analyze_document_structure
+    structure = analyze_document_structure(text)
+    features['structure'] = structure
+    
+    return doc_type, confidence, features
