@@ -150,7 +150,12 @@ class UniversalConverter:
                 # Direct text extraction successful
                 detected_lang = self.extractor._detect_language(text_data)
                 logger.info(f"[UniversalConverter] Detected language from PDF text: {detected_lang}")
-                extractor = create_extractor([detected_lang] + [l for l in self.languages if l != detected_lang])
+                
+                # Pass the PDF text as sample_text for format detection
+                extractor = create_extractor(
+                    [detected_lang] + [l for l in self.languages if l != detected_lang],
+                    sample_text=text_data
+                )
                 structured_data = extractor.extract_invoice_data(
                     text_data, document_type
                 )
@@ -190,7 +195,11 @@ class UniversalConverter:
 
                     detected_lang = self.extractor._detect_language(combined_text)
                     logger.info(f"[UniversalConverter] Detected language from OCR text: {detected_lang}")
-                    extractor = create_extractor([detected_lang] + [l for l in self.languages if l != detected_lang])
+                    # Pass the OCR text as sample_text for format detection
+                    extractor = create_extractor(
+                        [detected_lang] + [l for l in self.languages if l != detected_lang], 
+                        sample_text=combined_text
+                    )
                     structured_data = extractor.extract_invoice_data(
                         combined_text, document_type
                     )

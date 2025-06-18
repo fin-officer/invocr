@@ -68,10 +68,31 @@ class InvoiceItem:
     item_code: str = ""
     tax_rate: float = 0.0
     tax_amount: float = 0.0
+    _net_amount: Optional[float] = None
+
+    @property
+    def net_amount(self) -> float:
+        if self._net_amount is not None:
+            return self._net_amount
+        return self.total - self.tax_amount
+        
+    @net_amount.setter
+    def net_amount(self, value: float) -> None:
+        self._net_amount = value
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
-        return asdict(self)
+        return {
+            "description": self.description,
+            "quantity": self.quantity,
+            "unit_price": self.unit_price,
+            "currency": self.currency,
+            "net_amount": self.net_amount,
+            "total": self.total,
+            "tax_rate": self.tax_rate,
+            "tax_amount": self.tax_amount,
+            "item_code": self.item_code,
+        }
 
 
 @dataclass

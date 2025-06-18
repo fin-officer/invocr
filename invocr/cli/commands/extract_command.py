@@ -49,11 +49,29 @@ def extract_command(input_file, output_file, config_file, decision_tree, ocr, la
         if languages:
             lang_list = [lang.strip() for lang in languages.split(',')]
         
-        # Extract data - this is a placeholder that will be replaced with
-        # more advanced extraction logic using the decision tree and extractors
-        invoice_data = extract_invoice_data(
-            input_file,  # For now, this is not the correct API, but we'll fix in integration
-            rules=None   # Will be replaced with proper extractor selection
+        # Extract data using the dynamic extraction pipeline
+        from invocr.core.workflow.extraction_pipeline import process_file
+        from invocr.utils.ocr import extract_text
+        
+        # Prepare metadata
+        metadata = {
+            "filename": os.path.basename(input_file),
+            "file_extension": os.path.splitext(input_file)[1].lower(),
+        }
+        
+        # Extract OCR text if needed
+        ocr_text = None
+        if ocr:
+            logger.info(f"Extracting OCR text from {input_file}")
+            ocr_text = extract_text(input_file, languages=lang_list)
+        
+        # Process file through extraction pipeline
+        logger.info(f"Processing file using {'decision tree' if decision_tree else 'standard'} extraction")
+        invoice_data = process_file(
+            file_path=input_file,
+            ocr_text=ocr_text,
+            metadata=metadata,
+            validate=True  # Always validate extraction results
         )
         
         # Write output to file

@@ -411,11 +411,15 @@ class DataExtractor:
         if data.get("payment_method") or data.get("bank_account"):
             score += 1
 
+        # Payment information
+        if data.get("payment_method") or data.get("bank_account"):
+            score += 1
+
         # Calculate final score (normalized to 0.0-1.0)
         return min(score / max_score, 1.0)
 
 
-def create_extractor(languages: List[str] = None) -> DataExtractor:
+def create_extractor(languages: List[str] = None, **kwargs) -> DataExtractor:
     """
     Factory function to create data extractor instance.
     Dynamically selects the appropriate language-specific extractor.
@@ -437,7 +441,42 @@ def create_extractor(languages: List[str] = None) -> DataExtractor:
     if not languages:
         languages = ["en"]
 
-    # Select extractor based on primary language
+    # Check for special document formats first by examining content patterns 
+    def detect_document_format(text):
+        # Look for Adobe invoice specific patterns
+        adobe_patterns = [
+            r'Adobe Systems Software Ireland',
+            r'Adobe.*Invoice',
+            r'Invoice Number.*?\d+',
+            r'PRODUCT NUMBER.*PRODUCT DESCRIPTION',
+            r'GRAND TO[TU]AL',  # Handle both TOTAL and TOUAL (typo)
+        ]
+        
+        # Count matches for Adobe patterns
+        adobe_score = sum(1 for pattern in adobe_patterns if re.search(pattern, text or "", re.IGNORECASE))
+        
+        logger.info(f"[FormatDetector] Adobe score: {adobe_score}/5")
+        
+        # If we have strong Adobe patterns, use the specialized extractor
+        if adobe_score >= 2:
+            logger.info(f"[FormatDetector] Detected Adobe invoice format (score: {adobe_score}/5)")
+            return "adobe"
+        
+        return None
+    
+    # Select extractor based on content and language
+    # If sample_text is provided, use it for format detection
+    sample_text = kwargs.get("sample_text")
+    if sample_text:
+        # Try to detect document format first
+        doc_format = detect_document_format(sample_text)
+        
+        if doc_format == "adobe":
+            from invocr.extractors.specialized.adobe_extractor import AdobeInvoiceExtractor
+            logger.info(f"[ExtractorFactory] Using specialized AdobeInvoiceExtractor")
+            return AdobeInvoiceExtractor(ocr_text=sample_text)
+    
+    # If no special format detected, select by language
     primary_lang = languages[0].lower()
 
     if primary_lang == "pl":

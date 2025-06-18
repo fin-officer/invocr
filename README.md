@@ -77,7 +77,7 @@ poetry run invocr img2json receipt.jpg --languages en,pl,de
 poetry run invocr serve --port 8001
 
 # Run batch processing
-poetry run invocr batch ./invoices/ ./output/ --format xml
+poetry run invocr batch ./2024.11/attachments/ ./2024.11/attachments/ --format json
 ```
 
 ### Helper Scripts
