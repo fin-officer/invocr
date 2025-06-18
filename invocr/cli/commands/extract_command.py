@@ -12,8 +12,9 @@ import click
 from pathlib import Path
 from typing import List, Dict, Any
 
-from invocr.utils.logger import get_logger
-from invocr.core.workflow import ExtractionWorkflow, process_invoice, batch_process_invoices
+# Używamy adapterów zamiast bezpośrednich importów
+from invocr.adapters.utils_adapter import get_logger
+from invocr.adapters.extraction_adapter import ExtractionWorkflow, process_document, batch_process
 from ..common import load_yaml_config
 
 logger = get_logger(__name__)
