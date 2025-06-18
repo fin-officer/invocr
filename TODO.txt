@@ -85,10 +85,10 @@
   - [ ] Ensure totals are properly calculated from items when there's only one item
 
 ### 5.2. PDF Processing
-- [ ] Update `pdf_to_json.py` to support year/month processing like `html_to_png.py`:
-  - [ ] Add --month/--year arguments
-  - [ ] Process files in specified directories
-  - [ ] Save JSON in same directory with matching name
+- [x] Update `pdf_to_json.py` to support year/month processing like `html_to_png.py`:
+  - [x] Add --month/--year arguments
+  - [x] Process files in specified directories
+  - [x] Save JSON in same directory with matching name
 
 ## 6. Testing & Integration
 
@@ -104,3 +104,15 @@
 ## 7. Import Chain Resolution (Current Priority)
 - [ ] Fix `extract_document_number` import error in `formats/pdf/__init__.py`
 - [ ] Verify `invocr convert` CLI works end-to-end
+
+
+Przeanalizuj projekt, aby wykrozystac wysepcjalizowane funkcje 
+w zaleznosic od typu dokumentu, stworz dynamiczne drzewo deczyzynen 
+zrob refaktoryzacje, uzywaj generycznych funkcji i tworz workflow 
+przez python rezuywajac funkcji wczesnie napisanych , 
+tworz wyspecjalziowane funkcje, ktore uzywają roznych metod, m.in. 
+regex, ale ktore sa walidowalne i maja unit testy, aby bylo pewne 
+co robia i miały  ustrukturyzowane uzycie w zaleznosci od wykrytych danych, 
+powinno byc dynamiczne dopasowywanie funkcji wyodrebniajacych,
+ na bazie pdf2text powinno byc walidowanie, 
+ czy dane zostaly porpawnie wyekstrachowane jesli istnieja

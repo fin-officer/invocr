@@ -57,8 +57,8 @@ class ExtractionPipeline:
         metadata = metadata or {}
         
         # Step 1: Detect document type
-        document_type = detect_document_type(text, metadata)
-        logger.info(f"Detected document type: {document_type}")
+        document_type, confidence, features = detect_document_type(text, metadata)
+        logger.info(f"Detected document type: {document_type} (confidence: {confidence:.2f})")
         
         # Step 2: Select appropriate extractor
         extractor = create_extractor(
@@ -66,7 +66,8 @@ class ExtractionPipeline:
             document_type=document_type,
             metadata=metadata,
             rules=rules,
-            language=language
+            language=language,
+            features=features
         )
         logger.info(f"Selected extractor: {extractor.__class__.__name__}")
         
