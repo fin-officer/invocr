@@ -38,6 +38,7 @@ pymupdf = "^1.26.1"
 pypdf2 = "^3.0.1"
 imgkit = "^1.2.3"
 tox = "^4.27.0"
+jsonschema = "^4.24.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.3"

@@ -1,4 +1,6 @@
-[🏠 Home](../README.md) | [📚 Documentation](./) | [📋 Examples](./examples.md) | [🔌 API](./api.md) | [💻 CLI](./cli.md)
+# InvOCR Documentation
+
+[📥 Installation Guide](./docs/installation.md) | [📋 Examples](./docs/examples.md) | [🔧 Configuration](./docs/config.md) | [💻 CLI](./docs/cli.md) | [🔌 API](./docs/api.md)
 
 ---
 
@@ -65,6 +67,9 @@
 # Convert PDF to JSON
 poetry run invocr convert invoice.pdf invoice.json
 
+
+poetry run python invocr convert ./2024.11/attachments/invoice-25417.pdf --output-dir ./2024.11/attachments/invoice-25417.json
+
 # Process image with specific languages
 poetry run invocr img2json receipt.jpg --languages en,pl,de
 
@@ -90,6 +95,8 @@ poetry run python pdf2json.py
 poetry run python process_pdfs.py --input-dir ./2024.09/attachments/ --output-dir ./2024.09/attachments/
 poetry run python process_pdfs.py --input-dir ./2024.10/attachments/ --output-dir ./2024.10/attachments/
 poetry run python process_pdfs.py --input-dir ./2024.11/attachments/ --output-dir ./2024.11/attachments/
+
+poetry run python process_invocr.py --input-dir ./2024.11/attachments/ --output-dir ./2024.11/attachments/
 
 # Available options:
 # --input-dir: Directory containing PDF files (default: 2024.09/attachments)
@@ -555,31 +562,80 @@ docker run -p 8000:8000 invocr
 
 ```bash
 # Convert PDF to JSON
-invocr convert invoice.pdf invoice.json
+poetry run python pdf2json.py --input invoice.pdf --output invoice.json
 
-# Convert with specific languages
-invocr convert -l en,pl,de document.pdf output.json
+# Process image with specific languages
+poetry run python process_pdfs.py --input receipt.jpg --output receipt.json --languages en,pl,de
+
+# Convert invoice PDF to JSON with output directory
+poetry run python pdf_to_json.py --input ./invoices/invoice.pdf --output-dir ./output/
 
 # PDF to images
-invocr pdf2img document.pdf ./images/ --format png --dpi 300
+poetry run python pdf_to_json.py --extract-images --input document.pdf --output-dir ./images/
 
 # Image to JSON (OCR)
-invocr img2json scan.png data.json --doc-type invoice
+poetry run python process_pdfs.py --input scan.png --output data.json --doc-type invoice
 
-# JSON to EU XML format
-invocr json2xml data.json invoice.xml
+# Debug invoice extraction
+poetry run python debug_extraction.py --input invoice.pdf
 
 # Batch processing
-invocr batch ./input_files/ ./output/ --format json --parallel 4
+poetry run python process_pdfs.py --input-dir ./input_files/ --output-dir ./output/ --format json
 
-# Full pipeline: PDF → IMG → JSON → XML → HTML → PDF
-invocr pipeline --input document.pdf --output ./results/
+# View OCR text extracted from PDF
+poetry run python view_ocr_text.py --input document.pdf
 
-# Start API server (use port 8001 if 8000 is already in use)
-invocr serve --host 0.0.0.0 --port 8001
+# Test invoice extraction
+poetry run python test_invoice_extraction.py
 
-# Start API server with verbose logging
-invocr -v serve --port 8001
+# Debug receipt extraction
+poetry run python debug_receipt.py
+```
+
+## 🧩 Modular Extraction System
+
+InvOCR features a modular extraction system that provides better accuracy, maintainability, and extensibility:
+
+### Key Components
+
+- **Base Extractor**: Core extraction functionality in `formats/pdf/extractors/base_extractor.py`
+- **Specialized Extractors**: Format-specific extractors including:
+  - `PDFInvoiceExtractor`: General PDF invoice processor
+  - `AdobeInvoiceExtractor`: Specialized for Adobe JSON invoices with OCR verification
+
+### Utility Modules
+
+- `patterns.py`: Centralized regex patterns for all data elements
+- `date_utils.py`: Date parsing and extraction utilities
+- `numeric_utils.py`: Number and currency utilities
+- `item_utils.py`: Line item extraction utilities
+- `totals_utils.py`: Invoice totals extraction utilities
+
+### Multi-Level Detection
+
+The system implements a decision tree approach for document classification:
+
+1. Document type detection (invoice, receipt, Adobe JSON)
+2. Language detection (en, pl, de, etc.)
+3. Format-specific extractor selection
+4. OCR verification for higher confidence
+
+### Using the Extraction System
+
+```python
+# Example: Extract data from a PDF invoice
+from invocr.formats.pdf.extractors.pdf_invoice_extractor import PDFInvoiceExtractor
+
+# Create an extractor
+extractor = PDFInvoiceExtractor()
+
+# Extract data from text
+invoice_data = extractor.extract(text)
+
+# Access extracted data
+print(f"Invoice Number: {invoice_data['invoice_number']}")
+print(f"Issue Date: {invoice_data['issue_date']}")
+print(f"Total Amount: {invoice_data['total_amount']} {invoice_data['currency']}")
 ```
 
 ### REST API

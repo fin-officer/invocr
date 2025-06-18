@@ -1,9 +1,106 @@
-in that t generated file /home/tom/github/fin-officer/invocr/json_output/invoice.json  "total": 14.0 ? is wrong should be  like subtotal, because is just one items, sho the sum should be value of one item if is just one item, if is more items then sum
+# InvOCR Refactoring Project Plan
 
-in /home/tom/github/fin-officer/invocr/2024.09/attachments
-are .pdf files , they  should be processed and saved as json in json folder or in the same folder where is pdf, with the same name as .pdf, 
-creaste the same logic in script pdf_to_json.py such we have in html_to_png.py but in
-poetry run python html_to_png.py --month 11 --year 2024
-poetry run python pdf_to_json.py --month 11 --year 2024
+## 1. Code Structure Refactoring
 
-poetry run python invocr batch ./2024.09/attachments/ ./2024.09/attachments/ --format json
+### 1.1. Module Size Reduction (max 300 lines per file)
+- [x] Split `formats/pdf/extractor.py` into smaller modules in `formats/pdf/extractors/`
+  - [x] Create `extractors/patterns.py` with common regex patterns
+  - [x] Create `extractors/date_utils.py` for date extraction
+  - [x] Create `extractors/numeric_utils.py` for number/currency handling
+  - [x] Create `extractors/item_utils.py` for line item extraction
+  - [x] Create `extractors/totals_utils.py` for totals extraction
+  - [x] Create `extractors/base_extractor.py` with common functionality
+- [ ] Split `formats/pdf/rule_based_extractor.py` (>600 lines) into:
+  - [ ] `extractors/rules/rule_loader.py` - for rule loading
+  - [ ] `extractors/rules/rule_extractor.py` - for rule-based extraction logic
+  - [ ] `extractors/rules/validation.py` - for rule validation
+- [ ] Split other large modules (>300 lines) in core/ and formats/ directories
+
+### 1.2. Extraction System Restructuring
+- [x] Implement decision tree approach via `extractor_factory.py`
+- [ ] Create organized module structure:
+  - [ ] `invocr.extractors` - Base extraction logic
+  - [ ] `invocr.extractors.formats` - Format-specific extractors
+  - [ ] `invocr.extractors.specialized` - Special case extractors
+  - [ ] `invocr.extractors.rules` - Rule-based extraction systems
+
+## 2. Code Organization & CLI Interface
+
+### 2.1. Script Migration
+- [ ] Move standalone scripts to organized package structure:
+  - [ ] `invocr/cli/__init__.py` - CLI entry point
+  - [ ] `invocr/cli/commands/` - Individual command modules
+  - [ ] `invocr/cli/common.py` - Shared CLI utilities
+
+### 2.2. Command Line Interface Enhancement
+- [x] Create `invocr/__main__.py` for `poetry run invocr` commands
+- [ ] Implement subcommands in CLI:
+  - [ ] `invocr convert` - Convert documents between formats
+  - [ ] `invocr extract` - Extract data from documents
+  - [ ] `invocr batch` - Process multiple files
+  - [ ] `invocr validate` - Validate extraction results
+
+### 2.3. Fix Import Chain
+- [ ] Update `formats/pdf/__init__.py` re-exports to fix `extract_document_number` and other import errors
+- [ ] Fix all other cross-module imports for refactored code
+
+## 3. Configuration System
+
+### 3.1. YAML Configuration
+- [ ] Create YAML schema for extraction configuration
+- [ ] Implement `invocr/config/__init__.py` for config loading
+- [ ] Add sample config files in `config/` directory
+
+### 3.2. Configuration-driven Extraction Pipeline
+- [ ] Create `invocr/pipeline/__init__.py` with high-level pipeline
+- [ ] Implement pipeline stages:
+  - [ ] Document loading
+  - [ ] Format detection
+  - [ ] Text extraction
+  - [ ] Data extraction
+  - [ ] Validation
+  - [ ] Output formatting
+
+## 4. Documentation
+
+### 4.1. Split Documentation
+- [ ] Reorganize README.md into separate files:
+  - [ ] `docs/installation.md` - Installation instructions
+  - [ ] `docs/examples.md` - Usage examples
+  - [ ] `docs/cli.md` - CLI documentation
+  - [ ] `docs/config.md` - Configuration documentation
+  - [ ] `docs/api.md` - API documentation
+
+### 4.2. Example Updates
+- [ ] Update all examples to use refactored code
+- [ ] Add YAML configuration examples
+
+## 5. Current Issues to Address
+
+### 5.1. Data Extraction Fixes
+- [x] Fix Adobe JSON extraction (`invocr/extractors/specialized/adobe_extractor.py`)
+  - [x] Implement multi-level detection
+  - [x] Add OCR text verification
+- [ ] Fix total calculation in line items
+  - [ ] Ensure totals are properly calculated from items when there's only one item
+
+### 5.2. PDF Processing
+- [ ] Update `pdf_to_json.py` to support year/month processing like `html_to_png.py`:
+  - [ ] Add --month/--year arguments
+  - [ ] Process files in specified directories
+  - [ ] Save JSON in same directory with matching name
+
+## 6. Testing & Integration
+
+### 6.1. Test Coverage
+- [ ] Add tests for all refactored modules
+- [ ] Test YAML configuration system
+- [ ] Test CLI commands
+
+### 6.2. Continuous Integration
+- [ ] Update CI pipeline for refactored code
+- [ ] Add linting rules to enforce file size limits
+
+## 7. Import Chain Resolution (Current Priority)
+- [ ] Fix `extract_document_number` import error in `formats/pdf/__init__.py`
+- [ ] Verify `invocr convert` CLI works end-to-end

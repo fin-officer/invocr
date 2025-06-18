@@ -6,7 +6,7 @@ Handles PDF, Images, JSON, XML, HTML conversions
 import json
 import tempfile
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 from ..core.extractor import create_extractor
 from ..core.ocr import create_ocr_engine
@@ -467,3 +467,46 @@ def create_converter(languages: List[str] = None) -> UniversalConverter:
 def create_batch_converter(languages: List[str] = None) -> BatchConverter:
     """Factory function to create batch converter instance"""
     return BatchConverter(languages)
+
+
+def convert_document(input_file: Union[str, Path], 
+                   output_file: Union[str, Path], 
+                   output_format: str = 'json',
+                   languages: Optional[List[str]] = None,
+                   template: Optional[str] = None) -> Tuple[bool, Optional[str]]:
+    """
+    Convert a document from one format to another.
+    
+    Args:
+        input_file: Path to input file
+        output_file: Path to output file
+        output_format: Output format (json, xml, html)
+        languages: List of languages for OCR
+        template: Template file for html output
+    
+    Returns:
+        Tuple of (success, error_message)
+    """
+    try:
+        # Create converter instance
+        converter = create_converter(languages)
+        
+        # Apply template if provided for HTML format
+        if output_format.lower() == 'html' and template:
+            converter.html_handler.set_template(template)
+        
+        # Perform conversion
+        result = converter.convert(
+            input_path=input_file,
+            output_path=output_file,
+            target_format=output_format.lower()
+        )
+        
+        if not result.get('success', False):
+            return False, result.get('error', 'Unknown error during conversion')
+        
+        return True, None
+        
+    except Exception as e:
+        logger.error(f"Conversion error: {str(e)}")
+        return False, str(e)

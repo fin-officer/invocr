@@ -1,0 +1,42 @@
+# InvOCR Sample Extraction Configuration
+# This file controls the invoice extraction behavior
+
+extraction:
+  # Use OCR for text extraction
+  use_ocr: true
+  
+  # OCR languages to use
+  languages: ["eng", "pol", "deu"]
+  
+  # Preferred output format
+  preferred_format: "json"
+  
+  # Use decision tree approach for multi-level detection
+  decision_tree: true
+
+extractors:
+  # Enable Adobe specialized extractor
+  adobe: true
+  
+  # Enable rule-based extractor
+  rule_based: true
+  
+  # Enable machine learning extractor (if available)
+  ml_based: false
+
+output:
+  # Output format
+  format: "json"
+  
+  # Output directory
+  directory: "./output"
+
+processing:
+  # Number of files to process in a batch
+  batch_size: 10
+  
+  # Use parallel processing
+  parallel: true
+  
+  # Maximum number of worker processes
+  max_workers: 4
